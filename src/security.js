@@ -1,5 +1,5 @@
-const PASS_SHA256 = 'c115df80c9d37dc70d1335fd24429a8f1c12e04a47cfe0d3432ff4db233dc2be'
-const EMAIL_SHA256 = '3b306615967f305f7dda88446b475c8c3468cb8b9944bf4207c0d4ec753acf84'
+const PASS_SHA256 = '8b31e003daf9ab33f0678081be064ff627110d1f510701b7e09f4f0f1ade4dfd'
+const EMAIL_SHA256 = '8b31e003daf9ab33f0678081be064ff627110d1f510701b7e09f4f0f1ade4dfd'
 
 export async function sha256hex(value) {
   const bytes = new TextEncoder().encode(String(value))

