@@ -45,3 +45,14 @@ export function IconNotes() {
     </svg>
   )
 }
+
+export function IconNet() {
+  return (
+    <svg viewBox="0 0 48 48" width="42" height="42" aria-hidden="true">
+      <circle cx="10" cy="24" r="6" fill="#2ee6c7" />
+      <circle cx="38" cy="12" r="6" fill="#9ad7ff" />
+      <circle cx="38" cy="36" r="6" fill="#ffb14a" />
+      <path d="M16 24h16M32 16l-6 8 6 8" fill="none" stroke="#cde" strokeWidth="2" />
+    </svg>
+  )
+}

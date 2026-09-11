@@ -1,6 +1,6 @@
-# CyberPod Demo — Kali desktop simulation
+# CyberPod Demo
 
-محاكاة سطح Kali داخل المتصفح: ترمينال + Firefox + موقع Nexora للتدريب على Hydra.
+Kali desktop simulation: terminal, Firefox, and a virtual Nexora site for Hydra.
 
 ```bash
 npm install
@@ -9,14 +9,11 @@ npm run dev
 
 http://127.0.0.1:3000
 
-اسم المستخدم وكلمة السر للكل: `bisha` / `bisha`
+Unlock: `bisha` / `bisha`
 
-بعد Unlock:
+Lab net: `10.8.0.0/24`
+- kali tun0 `10.8.0.10`
+- gateway `10.8.0.1`
+- target `10.8.0.22` portal.nexora.lab
 
-1. افتح Terminal ونفّذ `nmap 10.8.0.22`
-2. افتح Firefox ESR على `http://10.8.0.22/login`
-3. شغّل Hydra من الترمينال
-4. ادخل للموقع بـ `bisha` / `bisha`
-5. انسخ العلم وسلّمه من الصندوق أسفل اليمين
-
-هذه محاكاة تعليمية. لا يوجد اتصال شبكة حقيقي ولا هجوم على أهداف خارج المختبر.
+Attack the site in Firefox with Hydra, then sign in and submit the flag.
