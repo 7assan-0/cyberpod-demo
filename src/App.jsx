@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { api, DEMO_MODE } from './api/client.js'
 import { DEMO } from './api/mock.js'
 
+function safeRestore() {
+  try {
+    return api.restore()
+  } catch {
+    return { auth: null, lab: null, session: null, view: 'login', lines: [] }
+  }
+}
+
 function Topbar({ user, view, onLogout }) {
   return (
     <header className="topbar">
@@ -42,7 +50,6 @@ function Login({ onSuccess }) {
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
         {error && <div className="error">{error}</div>}
         <div style={{ marginTop: 18 }}><button className="btn" type="submit">دخول</button></div>
-        <div className="hint-box muted">حساب العرض موجود في README فقط.</div>
       </form>
     </div>
   )
@@ -104,9 +111,8 @@ function Workspace({ session, lines, onCommand, onFlag, onBack, flagMsg }) {
           <h2>Kali Workspace</h2>
           <div className="mono warn">TIMER {mm}:{ss}</div>
         </div>
-        <div className="target-box mono">session {session.session_id} • target {session.target.host}</div>
         <div className="term">
-          {lines.map((line, i) => <p key={i} style={{ margin: '0 0 4px' }}>{line}</p>)}
+          {(lines || []).map((line, i) => <p key={i} style={{ margin: '0 0 4px' }}>{line}</p>)}
           <div ref={endRef} />
         </div>
         <form className="term-input" onSubmit={(e) => { e.preventDefault(); if (!cmd.trim()) return; onCommand(cmd); setCmd('') }}>
@@ -119,26 +125,24 @@ function Workspace({ session, lines, onCommand, onFlag, onBack, flagMsg }) {
             <input value={flag} onChange={(e) => setFlag(e.target.value)} placeholder="CYBERPOD{...}" maxLength={128} />
             <button className="btn" type="submit">Submit</button>
           </div>
-          {flagMsg && <p className={session.flag.status === 'ACCEPTED' ? 'success' : 'error'}>{flagMsg}</p>}
+          {flagMsg && <p className={session.flag?.status === 'ACCEPTED' ? 'success' : 'error'}>{flagMsg}</p>}
         </form>
       </section>
       <aside className="side">
-        <div className="stat"><b>{session.score.earned}/{session.score.max}</b>Score</div>
-        <div className="stat" style={{ marginTop: 8 }}><b>{session.progress_percent}%</b>Progress</div>
-        <div className="progress" style={{ marginTop: 10 }}><span style={{ width: session.progress_percent + '%' }} /></div>
+        <div className="stat"><b>{session.score?.earned || 0}/{session.score?.max || 100}</b>Score</div>
       </aside>
     </div>
   )
 }
 
 export default function App() {
-  const restored = api.restore()
+  const restored = safeRestore()
   const [auth, setAuth] = useState(restored.auth)
   const [lab, setLab] = useState(restored.lab)
   const [session, setSession] = useState(restored.session)
-  const [view, setView] = useState(restored.view)
-  const [lines, setLines] = useState(restored.lines)
-  const [flagMsg, setFlagMsg] = useState(restored.session?.flag?.status === 'ACCEPTED' ? 'ACCEPTED' : '')
+  const [view, setView] = useState(restored.view || 'login')
+  const [lines, setLines] = useState(restored.lines || [])
+  const [flagMsg, setFlagMsg] = useState('')
   const [, setTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 1000)
@@ -169,7 +173,7 @@ export default function App() {
               setSession(res.session)
               setFlagMsg(res.result)
             } catch (err) {
-              setFlagMsg(err.message === 'RATE_LIMITED' ? 'RATE_LIMITED' : 'ERROR')
+              setFlagMsg(err.message || 'ERROR')
             }
           }}
         />
@@ -182,7 +186,7 @@ export default function App() {
           setFlagMsg('')
           setView('workspace')
         }} />
-      ) : null}
+      ) : <Login onSuccess={async (next) => { setAuth(next); setLab((await api.listLabs()).labs[0]); setView('lab') }} />}
     </div>
   )
 }
