@@ -27,8 +27,8 @@ function Login({ onSuccess }) {
     e.preventDefault()
     try {
       onSuccess(await api.login({ email, password }))
-    } catch {
-      setError('INVALID_CREDENTIALS')
+    } catch (err) {
+      setError(err.message === 'RATE_LIMITED' ? 'RATE_LIMITED' : 'INVALID_CREDENTIALS')
     }
   }
   return (
@@ -42,7 +42,7 @@ function Login({ onSuccess }) {
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
         {error && <div className="error">{error}</div>}
         <div style={{ marginTop: 18 }}><button className="btn" type="submit">دخول</button></div>
-        <div className="hint-box mono" dir="ltr">Email: {DEMO.email}<br />Password: {DEMO.password}</div>
+        <div className="hint-box muted">حساب العرض موجود في README فقط.</div>
       </form>
     </div>
   )
@@ -57,14 +57,6 @@ function LabHome({ lab, session, onStart }) {
         <span className="badge">{lab.id}</span>
         <h1>{lab.name}</h1>
         <p>{lab.description}</p>
-        <div className="flow">
-          <span className="active">تسجيل الدخول</span>
-          <span className="active">Hydra Lab</span>
-          <span>Start Lab</span>
-          <span>Kali Workspace</span>
-          <span>Submit Flag</span>
-          <span>Score</span>
-        </div>
       </section>
       <div className="grid grid-2">
         <article className="card">
@@ -112,21 +104,19 @@ function Workspace({ session, lines, onCommand, onFlag, onBack, flagMsg }) {
           <h2>Kali Workspace</h2>
           <div className="mono warn">TIMER {mm}:{ss}</div>
         </div>
-        <div className="target-box mono">
-          session {session.session_id} • target {session.target.host} • {session.target.status}
-        </div>
+        <div className="target-box mono">session {session.session_id} • target {session.target.host}</div>
         <div className="term">
           {lines.map((line, i) => <p key={i} style={{ margin: '0 0 4px' }}>{line}</p>)}
           <div ref={endRef} />
         </div>
         <form className="term-input" onSubmit={(e) => { e.preventDefault(); if (!cmd.trim()) return; onCommand(cmd); setCmd('') }}>
-          <input className="mono" value={cmd} onChange={(e) => setCmd(e.target.value)} placeholder="kali@cyberpod:~$" />
+          <input className="mono" value={cmd} onChange={(e) => setCmd(e.target.value)} placeholder="kali@cyberpod:~$" maxLength={180} />
           <button className="btn" type="submit">Run</button>
         </form>
         <form className="flag-box" onSubmit={(e) => { e.preventDefault(); onFlag(flag) }}>
           <strong>Submit Flag</strong>
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <input value={flag} onChange={(e) => setFlag(e.target.value)} placeholder="CYBERPOD{...}" />
+            <input value={flag} onChange={(e) => setFlag(e.target.value)} placeholder="CYBERPOD{...}" maxLength={128} />
             <button className="btn" type="submit">Submit</button>
           </div>
           {flagMsg && <p className={session.flag.status === 'ACCEPTED' ? 'success' : 'error'}>{flagMsg}</p>}
@@ -136,10 +126,6 @@ function Workspace({ session, lines, onCommand, onFlag, onBack, flagMsg }) {
         <div className="stat"><b>{session.score.earned}/{session.score.max}</b>Score</div>
         <div className="stat" style={{ marginTop: 8 }}><b>{session.progress_percent}%</b>Progress</div>
         <div className="progress" style={{ marginTop: 10 }}><span style={{ width: session.progress_percent + '%' }} /></div>
-        <div className="target-box" style={{ marginTop: 16 }}>
-          <strong>Target</strong>
-          <p className="mono muted" dir="ltr">{session.target.name}<br />{session.target.host}<br />{session.target.ports.join(', ')}</p>
-        </div>
       </aside>
     </div>
   )
@@ -154,38 +140,22 @@ export default function App() {
   const [lines, setLines] = useState(restored.lines)
   const [flagMsg, setFlagMsg] = useState(restored.session?.flag?.status === 'ACCEPTED' ? 'ACCEPTED' : '')
   const [, setTick] = useState(0)
-
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 1000)
     return () => clearInterval(id)
   }, [])
-
   if (!auth) return <Login onSuccess={async (next) => {
     setAuth(next)
     setLab((await api.listLabs()).labs[0])
     setView('lab')
   }} />
-
   return (
     <div className="app-shell">
-      <Topbar
-        user={auth.user}
-        view={view === 'workspace' ? 'Kali Workspace' : 'Hydra Lab'}
-        onLogout={async () => {
-          await api.logout()
-          setAuth(null)
-          setSession(null)
-          setLines([])
-          setFlagMsg('')
-          setView('login')
-        }}
-      />
+      <Topbar user={auth.user} view={view === 'workspace' ? 'Kali Workspace' : 'Hydra Lab'} onLogout={async () => {
+        await api.logout(); setAuth(null); setSession(null); setLines([]); setFlagMsg(''); setView('login')
+      }} />
       {view === 'workspace' && session ? (
-        <Workspace
-          session={session}
-          lines={lines}
-          flagMsg={flagMsg}
-          onBack={() => { api.setView('lab'); setView('lab') }}
+        <Workspace session={session} lines={lines} flagMsg={flagMsg} onBack={() => { api.setView('lab'); setView('lab') }}
           onCommand={(cmd) => {
             api.runCommand(session.session_id, cmd)
             api.getSessionStatus(session.session_id).then((r) => {
@@ -194,27 +164,24 @@ export default function App() {
             })
           }}
           onFlag={async (flag) => {
-            const res = await api.submitFlag(session.session_id, {
-              flag,
-              expected_revision: api.getRevision(session.session_id),
-            })
-            setSession(res.session)
-            setFlagMsg(res.result)
+            try {
+              const res = await api.submitFlag(session.session_id, { flag, expected_revision: api.getRevision(session.session_id) })
+              setSession(res.session)
+              setFlagMsg(res.result)
+            } catch (err) {
+              setFlagMsg(err.message === 'RATE_LIMITED' ? 'RATE_LIMITED' : 'ERROR')
+            }
           }}
         />
       ) : lab ? (
-        <LabHome
-          lab={lab}
-          session={session}
-          onStart={async () => {
-            const created = await api.createSession(lab.id)
-            const started = await api.startSession(created.session.session_id)
-            setSession(started.session)
-            setLines(api.getTerminal(started.session.session_id))
-            setFlagMsg('')
-            setView('workspace')
-          }}
-        />
+        <LabHome lab={lab} session={session} onStart={async () => {
+          const created = await api.createSession(lab.id)
+          const started = await api.startSession(created.session.session_id)
+          setSession(started.session)
+          setLines(api.getTerminal(started.session.session_id))
+          setFlagMsg('')
+          setView('workspace')
+        }} />
       ) : null}
     </div>
   )
