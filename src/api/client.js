@@ -1,4 +1,5 @@
 import { mockApi } from './mock.js'
+import { liveApi } from './live.js'
 
-export const api = mockApi
-export const DEMO_MODE = true
+export const DEMO_MODE = !import.meta.env.VITE_API_BASE
+export const api = DEMO_MODE ? mockApi : liveApi
