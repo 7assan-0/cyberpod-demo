@@ -1,43 +1,16 @@
 # CyberPod Demo MVP
 
-نسخة عرض تعمل في Chrome وتشرح الرحلة كاملة بدون Docker أو Core الحقيقي.
-
-المسار:
-
-تسجيل الدخول → Hydra Lab → Start Lab → Kali Workspace → المهام والتقدم → Submit Flag → Score
-
-## التشغيل
+نسخة عرض في Chrome. ليست منصة إنتاج.
 
 ```bash
 npm install
 npm run dev
 ```
 
-ثم افتح:
+http://127.0.0.1:3000
 
-http://localhost:3000
+حساب العرض: `demo@cyberpod.local` / `CyberPodDemo123!`
 
-## حساب العرض
+العلم: `CYBERPOD{hydra_ssh_cracked}`
 
-- Email: `demo@cyberpod.local`
-- Password: `CyberPodDemo123!`
-
-## أوامر الطرفية التجريبية
-
-```text
-help
-nmap 10.8.0.22
-services
-hydra -l admin -P wordlist.txt ssh://10.8.0.22
-cat flag.txt
-```
-
-## العلم
-
-```text
-CYBERPOD{hydra_ssh_cracked}
-```
-
-إعادة تحميل الصفحة تحافظ على الجلسة التجريبية عبر localStorage.
-
-هذا المستودع للعرض فقط. العزل الحقيقي وGateway وعمال التوزيع مؤجلة بعد المسابقة.
+حماية العرض: هاش SHA-256 للدخول والعلم، حد محاولات، جلسة 30 دقيقة، CSP ومنع iframe، بدون عرض كلمة المرور في الشاشة.
