@@ -1,6 +1,6 @@
 id: hydra-ssh-101
 name: Hydra Lab
-description: Demo-only Hydra SSH lab used by the Chrome walkthrough.
+description: Simulated Kali desktop. Brute-force the Nexora web portal with Hydra.
 difficulty: beginner
 category: Brute Force
 status: AVAILABLE
@@ -9,22 +9,23 @@ time_limit_seconds: 1200
 required_tools:
   - nmap
   - hydra
+  - firefox
 tasks:
   - id: recon
     title: Nmap recon
     description: Scan the training target.
     points: 20
   - id: identify
-    title: Identify SSH
-    description: Confirm the exposed service.
+    title: Identify the web login
+    description: Confirm HTTP on port 80 and open the portal.
     points: 15
   - id: hydra
     title: Run Hydra
-    description: Authenticate against the training target.
+    description: Attack the portal login with a wordlist.
     points: 30
   - id: creds
     title: Recover credentials
-    description: Read the session-private result.
+    description: Sign in to the virtual site with the found password.
     points: 15
   - id: submit
     title: Submit flag

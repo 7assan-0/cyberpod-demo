@@ -108,4 +108,11 @@ export const liveApi = {
   getRevision(session) {
     return Number(session?.revision) || 0
   },
+  loginPortal() {
+    return { ok: false, reason: 'live' }
+  },
+  openPortal() {},
+  getPortalFlag() {
+    return null
+  },
 }

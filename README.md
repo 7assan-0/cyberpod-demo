@@ -1,6 +1,6 @@
-# CyberPod Demo MVP
+# CyberPod Demo — Kali desktop simulation
 
-نسخة عرض في Chrome وفق عقد الفرونت `/api/v1`. ليست منصة إنتاج.
+محاكاة سطح Kali داخل المتصفح: ترمينال + Firefox + موقع Nexora للتدريب على Hydra.
 
 ```bash
 npm install
@@ -9,16 +9,16 @@ npm run dev
 
 http://127.0.0.1:3000
 
-حساب العرض: `demo@cyberpod.local` / `CyberPodDemo123!`
+حساب المنصة: `demo@cyberpod.local` / `CyberPodDemo123!`
 
-العلم يُصدر لكل جلسة بعد Start، ولا يُكتب في YAML أو كتالوج المختبر أو استجابة API. اقرأه من مساحة العمل بعد المهام، ثم سلّمه عبر `POST /sessions/{id}/flags`.
+بعد Start:
 
-الوضع الحي: ضع `VITE_API_BASE` على أصل الـ API. المسارات المستخدمة:
+1. افتح Terminal ونفّذ `nmap 10.8.0.22`
+2. افتح Firefox ESR على `http://10.8.0.22/login`
+3. شغّل Hydra من الترمينال
+4. ادخل للموقع بالبيانات اللي تطلع
+5. انسخ العلم وسلّمه من الصندوق أسفل اليمين
 
-- `POST /api/v1/auth/login` و `POST /api/v1/auth/logout` و `GET /api/v1/auth/me`
-- `GET /api/v1/labs`
-- `POST /api/v1/labs/{id}/sessions` ثم `POST /api/v1/sessions/{id}/start` إذا بقيت `CREATED`
-- `GET /api/v1/sessions/{id}/status`
-- `POST /api/v1/sessions/{id}/flags`
+هذه محاكاة تعليمية. لا يوجد اتصال شبكة حقيقي ولا هجوم على أهداف خارج المختبر.
 
-الدرجة و`revision` و`expires_at` و`server_time` تأتي من السيرفر. المؤقت لا يستخدم ساعة الجهاز مباشرة.
+العلم يصدر لكل جلسة بعد Start ولا يُرجع في استجابة API العامة.
