@@ -1,6 +1,6 @@
 # CyberPod Demo
 
-Kali desktop simulation: terminal, Firefox, and a virtual Nexora site for Hydra.
+Kali desktop simulation: terminal, Firefox, and Nirs Central Bank for Hydra.
 
 ```bash
 npm install
@@ -14,6 +14,6 @@ Unlock: `bisha` / `bisha`
 Lab net: `10.8.0.0/24`
 - kali tun0 `10.8.0.10`
 - gateway `10.8.0.1`
-- target `10.8.0.22` portal.nexora.lab
+- target `10.8.0.22` bank.nirs.lab
 
-Attack the site in Firefox with Hydra, then sign in and submit the flag.
+Attack the bank login in Firefox with Hydra, then sign in and submit the flag.
