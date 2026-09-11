@@ -1,4 +1,3 @@
-const FLAG_SHA256 = '94e4c7f3e94b883ff5cfb676d082c7e36006ac22be1eb0209b4df4fad4cd9702'
 const PASS_SHA256 = 'c115df80c9d37dc70d1335fd24429a8f1c12e04a47cfe0d3432ff4db233dc2be'
 const EMAIL_SHA256 = '3b306615967f305f7dda88446b475c8c3468cb8b9944bf4207c0d4ec753acf84'
 
@@ -13,8 +12,13 @@ export async function credentialsMatch(email, password) {
   return e === EMAIL_SHA256 && p === PASS_SHA256
 }
 
-export async function flagMatches(flag) {
-  return (await sha256hex(String(flag).trim())) === FLAG_SHA256
+export async function hashEquals(value, expectedHex) {
+  if (!expectedHex) return false
+  const digest = await sha256hex(String(value).trim())
+  if (digest.length !== expectedHex.length) return false
+  let out = 0
+  for (let i = 0; i < digest.length; i += 1) out |= digest.charCodeAt(i) ^ expectedHex.charCodeAt(i)
+  return out === 0
 }
 
 export function sanitizeInput(value, max = 200) {
