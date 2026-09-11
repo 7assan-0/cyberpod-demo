@@ -1,7 +1,7 @@
 import { COMMANDS, TARGET } from '../lab.js'
 import { credentialsMatch, hashEquals, randomToken, RateGate, sha256hex } from '../security.js'
 
-const DEMO = { email: 'demo@cyberpod.local' }
+const DEMO = { email: 'bisha' }
 const STORAGE_KEY = 'cyberpod-demo-state'
 const SESSION_MS = 30 * 60 * 1000
 const logins = new RateGate(5, 5 * 60 * 1000)
@@ -132,7 +132,6 @@ async function issueFlag(row) {
   runtimeSecrets[row.id] = flag
   row.flagHash = await sha256hex(flag)
 }
-
 function mark(row, id) {
   if (!row.done.includes(id)) row.done.push(id)
 }
@@ -156,7 +155,7 @@ export const mockApi = {
   async login({ email, password }) {
     if (!logins.check()) error('RATE_LIMITED')
     if (!(await credentialsMatch(email, password))) error('INVALID_CREDENTIALS')
-    db.user = { id: 'demo-student', display_name: 'kali' }
+    db.user = { id: 'bisha', display_name: 'bisha' }
     db.csrf = randomToken()
     db.loggedAt = Date.now()
     db.view = 'lab'
@@ -208,12 +207,6 @@ export const mockApi = {
       portalUnlocked: false,
       termLines: [
         'Linux kali 6.8.11-amd64 x86_64 GNU/Linux',
-        'The programs included with the Kali GNU/Linux system are free software;',
-        'the exact distribution terms for each program are described in the',
-        'individual files in /usr/share/doc/*/copyright.',
-        '',
-        'Kali GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent',
-        'permitted by applicable law.',
         'Type `help` to list lab commands.',
         '',
       ],
@@ -268,7 +261,7 @@ export const mockApi = {
     row.started_at = null
     row.expires_at = null
     row.revision += 1
-    row.termLines = ['Session restarted. Previous flag and score were reset.', '']
+    row.termLines = ['Session restarted.', '']
     persist()
     return this.startSession(sessionId)
   },
@@ -304,7 +297,7 @@ export const mockApi = {
   loginPortal(sessionId, username, password) {
     const row = getRow(sessionId)
     if (!row || row.status !== 'RUNNING') return { ok: false, reason: 'offline' }
-    const userOk = String(username || '').trim() === TARGET.user
+    const userOk = String(username || '').trim().toLowerCase() === TARGET.user
     const passOk = String(password || '') === TARGET.pass
     if (!userOk || !passOk) return { ok: false, reason: 'invalid' }
     row.portalUnlocked = true
@@ -331,8 +324,7 @@ export const mockApi = {
     if (!row) return ['session not found']
     const clean = String(raw || '').replace(/[\u0000-\u001f]/g, '').slice(0, 220)
     const lower = clean.trim().toLowerCase()
-    row.termLines.push('┌──(kali㉿kali)-[~]')
-    row.termLines.push('└─$ ' + clean.trim())
+    row.termLines.push('bisha@kali:~$ ' + clean.trim())
     if (lower === 'clear') {
       row.termLines = []
       persist()
@@ -363,7 +355,7 @@ export const mockApi = {
       const issued = runtimeSecrets[sessionId]
       output = row.done.includes('hydra') && issued
         ? [issued]
-        : ['cat: flag.txt: Permission denied — complete the Hydra attack first']
+        : ['cat: flag.txt: Permission denied']
     }
     row.termLines.push(...output, '')
     row.revision += 1
