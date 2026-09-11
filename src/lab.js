@@ -56,7 +56,6 @@ export const COMMANDS = {
     '  <input name="username">',
     '  <input name="password" type="password">',
     '</form>',
-    '<!-- error fragment: Invalid credentials -->',
   ],
   hydra: [
     'Hydra v9.5 starting at lab-time',
