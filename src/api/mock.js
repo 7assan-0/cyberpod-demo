@@ -11,23 +11,23 @@ const runtimeSecrets = {}
 const HYDRA_LAB = {
   id: 'hydra-ssh-101',
   name: 'Hydra Lab',
-  description: 'سطح كالي محاكى. اكتشف بوابة Nexora ثم اكسرها بـ Hydra.',
+  description: 'Scan the lab net, open the Nexora portal in Firefox, then crack it with Hydra.',
   difficulty: 'Beginner',
   category: 'Brute Force',
   estimated_duration_minutes: 20,
   time_limit_seconds: 20 * 60,
   required_tools: ['nmap', 'hydra', 'firefox'],
   status: 'AVAILABLE',
-  objectives: ['امسح الهدف', 'افتح الموقع الافتراضي', 'شغّل Hydra', 'ادخل للموقع', 'سلّم العلم'],
+  objectives: ['Scan the target', 'Open the portal', 'Run Hydra', 'Sign in', 'Submit the flag'],
   tasks: [
-    { id: 'recon', title: 'استطلاع الهدف بـ Nmap', description: 'امسح الهدف التدريبي', points: 20 },
-    { id: 'identify', title: 'تحديد بوابة الويب', description: 'أكد خدمة HTTP وافتح الموقع', points: 15 },
-    { id: 'hydra', title: 'تشغيل Hydra على الموقع', description: 'اكسر نموذج تسجيل الدخول', points: 30 },
-    { id: 'creds', title: 'الدخول للموقع بالبيانات', description: 'سجّل دخول في بوابة Nexora', points: 15 },
-    { id: 'submit', title: 'تسليم الـ Flag', description: 'سلّم العلم الصادر لهذه الجلسة', points: 20 },
+    { id: 'recon', title: 'Scan 10.8.0.22', description: 'Find HTTP on the lab host', points: 20 },
+    { id: 'identify', title: 'Open the portal', description: 'Load http://10.8.0.22/login', points: 15 },
+    { id: 'hydra', title: 'Run Hydra', description: 'Attack the portal login form', points: 30 },
+    { id: 'creds', title: 'Sign in', description: 'Use the cracked credentials', points: 15 },
+    { id: 'submit', title: 'Submit flag', description: 'Submit the session flag', points: 20 },
   ],
   max_score: 100,
-  instructions: ['سجّل دخول', 'ابدأ المختبر', 'افتح الترمينال والمتصفح', 'سلّم علم هذه الجلسة'],
+  instructions: ['Unlock', 'Use terminal and Firefox', 'Attack the portal', 'Submit the flag'],
 }
 
 const now = () => new Date().toISOString()
@@ -206,8 +206,9 @@ export const mockApi = {
       flagHash: '',
       portalUnlocked: false,
       termLines: [
-        'Linux kali 6.8.11-amd64 x86_64 GNU/Linux',
-        'Type `help` to list lab commands.',
+        'Linux kali 6.8.11-amd64',
+        'tun0 10.8.0.10/24  gateway 10.8.0.1  target 10.8.0.22',
+        'Type help for lab commands.',
         '',
       ],
     }
@@ -330,11 +331,16 @@ export const mockApi = {
       persist()
       return row.termLines
     }
-    let output = ['command not found. type `help`']
+    let output = ['command not found. type help']
     if (lower === 'help') output = COMMANDS.help
     if (lower === 'whoami') output = COMMANDS.whoami
     if (lower === 'pwd') output = COMMANDS.pwd
     if (lower === 'ls' || lower.startsWith('ls ')) output = COMMANDS.ls
+    if (lower === 'ip a' || lower === 'ip addr' || lower === 'ifconfig' || lower === 'ip a s tun0') output = COMMANDS.ip
+    if (lower.startsWith('ping')) {
+      output = COMMANDS.ping
+      mark(row, 'recon')
+    }
     if (lower.startsWith('nmap')) {
       output = COMMANDS.nmap
       mark(row, 'recon')
@@ -346,16 +352,13 @@ export const mockApi = {
     if (lower.startsWith('hydra')) {
       output = COMMANDS.hydra
       mark(row, 'hydra')
-      mark(row, 'creds')
     }
     if (lower.includes('wordlist') && (lower.startsWith('cat') || lower.startsWith('less') || lower.startsWith('more'))) {
       output = COMMANDS.wordlist
     }
     if (lower.startsWith('cat flag') || lower === 'cat flag.txt') {
       const issued = runtimeSecrets[sessionId]
-      output = row.done.includes('hydra') && issued
-        ? [issued]
-        : ['cat: flag.txt: Permission denied']
+      output = row.done.includes('hydra') && issued ? [issued] : ['cat: flag.txt: Permission denied']
     }
     row.termLines.push(...output, '')
     row.revision += 1
