@@ -42,7 +42,7 @@ function Login({ onSuccess }) {
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
         {error && <div className="error">{error}</div>}
         <div style={{ marginTop: 18 }}><button className="btn" type="submit">دخول</button></div>
-        <div className="hint-box mono">Email: {DEMO.email}<br />Password: {DEMO.password}</div>
+        <div className="hint-box mono" dir="ltr">Email: {DEMO.email}<br />Password: {DEMO.password}</div>
       </form>
     </div>
   )
@@ -138,7 +138,7 @@ function Workspace({ session, lines, onCommand, onFlag, onBack, flagMsg }) {
         <div className="progress" style={{ marginTop: 10 }}><span style={{ width: session.progress_percent + '%' }} /></div>
         <div className="target-box" style={{ marginTop: 16 }}>
           <strong>Target</strong>
-          <p className="mono muted">{session.target.name}<br />{session.target.host}<br />{session.target.ports.join(', ')}</p>
+          <p className="mono muted" dir="ltr">{session.target.name}<br />{session.target.host}<br />{session.target.ports.join(', ')}</p>
         </div>
       </aside>
     </div>
