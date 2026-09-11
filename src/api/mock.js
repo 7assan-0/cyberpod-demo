@@ -11,23 +11,23 @@ const runtimeSecrets = {}
 const HYDRA_LAB = {
   id: 'hydra-ssh-101',
   name: 'Hydra Lab',
-  description: 'Scan the lab net, open the Nexora portal in Firefox, then crack it with Hydra.',
+  description: 'Scan the lab net, open Nirs Central Bank in Firefox, then crack the staff login with Hydra.',
   difficulty: 'Beginner',
   category: 'Brute Force',
   estimated_duration_minutes: 20,
   time_limit_seconds: 20 * 60,
   required_tools: ['nmap', 'hydra', 'firefox'],
   status: 'AVAILABLE',
-  objectives: ['Scan the target', 'Open the portal', 'Run Hydra', 'Sign in', 'Submit the flag'],
+  objectives: ['Scan the target', 'Open the bank site', 'Run Hydra', 'Sign in', 'Submit the flag'],
   tasks: [
-    { id: 'recon', title: 'Scan 10.8.0.22', description: 'Find HTTP on the lab host', points: 20 },
-    { id: 'identify', title: 'Open the portal', description: 'Load http://10.8.0.22/login', points: 15 },
-    { id: 'hydra', title: 'Run Hydra', description: 'Attack the portal login form', points: 30 },
+    { id: 'recon', title: 'Scan 10.8.0.22', description: 'Find HTTP on bank.nirs.lab', points: 20 },
+    { id: 'identify', title: 'Open Nirs Central Bank', description: 'Load http://10.8.0.22/login', points: 15 },
+    { id: 'hydra', title: 'Run Hydra', description: 'Attack the bank login form', points: 30 },
     { id: 'creds', title: 'Sign in', description: 'Use the cracked credentials', points: 15 },
     { id: 'submit', title: 'Submit flag', description: 'Submit the session flag', points: 20 },
   ],
   max_score: 100,
-  instructions: ['Unlock', 'Use terminal and Firefox', 'Attack the portal', 'Submit the flag'],
+  instructions: ['Unlock', 'Use terminal and Firefox', 'Attack the bank login', 'Submit the flag'],
 }
 
 const now = () => new Date().toISOString()
@@ -207,7 +207,7 @@ export const mockApi = {
       portalUnlocked: false,
       termLines: [
         'Linux kali 6.8.11-amd64',
-        'tun0 10.8.0.10/24  gateway 10.8.0.1  target 10.8.0.22',
+        'tun0 10.8.0.10/24  gateway 10.8.0.1  target 10.8.0.22 bank.nirs.lab',
         'Type help for lab commands.',
         '',
       ],
