@@ -10,7 +10,7 @@
 html, body, #root { margin: 0; height: 100%; }
 body {
   color: var(--text);
-  font-family: "Noto Sans", "IBM Plex Sans Arabic", sans-serif;
+  font-family: "Noto Sans", sans-serif;
   background: #05080d url('/wallpaper.svg') center/cover no-repeat fixed;
 }
 button, input { font-family: inherit; }
@@ -53,7 +53,6 @@ button { cursor: pointer; }
   background: #0d1118; border: 1px solid #2a3344; color: #fff;
 }
 .lock-card .btn { width: 100%; margin-top: 12px; }
-.lock-card small { display: block; margin-top: 12px; color: var(--muted); }
 .btn { border: 0; padding: 10px 16px; font-weight: 600; background: var(--teal); color: #052013; }
 .error { color: var(--red); margin-top: 8px; }
 .success { color: var(--green); }
@@ -84,7 +83,7 @@ button { cursor: pointer; }
 .panel-apps:hover, .ghost:hover { background: #333; }
 .panel-mid { margin-left: auto; color: #9ad7ff; font-family: "Ubuntu Mono", monospace; }
 .panel-right { display: flex; gap: 12px; align-items: center; }
-.wifi { opacity: .8; font-size: 11px; }
+.wifi { color: #3dff9a; font-size: 11px; font-family: "Ubuntu Mono", monospace; }
 .appmenu {
   position: absolute; top: 30px; left: 6px; background: #1c1c1c;
   border: 1px solid #333; min-width: 240px; z-index: 60;
@@ -111,7 +110,7 @@ button { cursor: pointer; }
 .xfwm {
   position: absolute; background: #1d1d1d; border: 1px solid #111;
   box-shadow: 0 18px 50px rgba(0,0,0,.45);
-  display: flex; flex-direction: column; min-width: 320px;
+  display: flex; flex-direction: column; min-width: 280px;
 }
 .xfwm-bar {
   height: 28px; background: linear-gradient(#3a3a3a, #2a2a2a);
@@ -166,6 +165,21 @@ button { cursor: pointer; }
 .thunar pre { background: #111; padding: 10px; color: #cde; font-size: 12px; }
 .notes { padding: 14px; color: #ddd; font-family: "Ubuntu Mono", monospace; font-size: 13px; }
 .notes code { display: block; white-space: pre-wrap; color: #9dffb0; margin-top: 8px; }
+
+.netmap {
+  height: 100%; padding: 16px; color: #d7e7f3;
+  font-family: "Ubuntu Mono", monospace; background: #10161d;
+}
+.net-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.net-node {
+  min-width: 140px; padding: 10px 12px; border: 1px solid #2ee6c7;
+  background: #152028; text-align: center;
+}
+.net-node b { display: block; color: #2ee6c7; }
+.net-node.target { border-color: #ffb14a; }
+.net-node.target b { color: #ffb14a; }
+.net-line { flex: 1; min-width: 24px; height: 2px; background: #2ee6c7; }
+.netmap p { color: #8aa0b3; font-size: 12px; }
 
 .lab-tray {
   position: absolute; right: 12px; bottom: 12px; width: 240px;

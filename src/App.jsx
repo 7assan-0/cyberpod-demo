@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from './api/client.js'
 import { DEMO, TARGET } from './api/mock.js'
-import { DragonMark, IconFirefox, IconFolder, IconNotes, IconTerminal } from './icons.jsx'
+import { DragonMark, IconFirefox, IconFolder, IconNet, IconNotes, IconTerminal } from './icons.jsx'
 
 function safeRestore() {
   try {
@@ -67,11 +67,11 @@ function LockScreen({ onSuccess, title = 'bisha' }) {
   )
 }
 
-function WindowFrame({ title, icon, z, x, y, w, h, onFocus, onClose, onDragStart, children }) {
+function WindowFrame({ title, z, x, y, w, h, onFocus, onClose, onDragStart, children }) {
   return (
     <div className="xfwm" style={{ zIndex: z, left: x, top: y, width: w, height: h }} onMouseDown={onFocus}>
       <header className="xfwm-bar" onMouseDown={onDragStart}>
-        <span className="xfwm-title">{icon} {title}</span>
+        <span className="xfwm-title">{title}</span>
         <span className="xfwm-btns">
           <i /><i /><button type="button" onClick={onClose} aria-label="Close">X</button>
         </span>
@@ -106,10 +106,14 @@ function TerminalApp({ lines, onCommand }) {
 function FirefoxApp({ sessionId, onStatus }) {
   const [url, setUrl] = useState(TARGET.url)
   const [page, setPage] = useState('login')
-  const [user, setUser] = useState(TARGET.user)
-  const [pass, setPass] = useState(TARGET.pass)
+  const [user, setUser] = useState('')
+  const [pass, setPass] = useState('')
   const [error, setError] = useState('')
   const [flag, setFlag] = useState(null)
+  useEffect(() => {
+    api.openPortal?.(sessionId)
+    onStatus()
+  }, [sessionId])
   function go(e) {
     e?.preventDefault()
     const raw = url.trim().toLowerCase()
@@ -143,7 +147,7 @@ function FirefoxApp({ sessionId, onStatus }) {
         {page === 'home' && (
           <div className="fx-home">
             <h2>Firefox ESR</h2>
-            <button type="button" className="linkish" onClick={() => { setUrl(TARGET.url); setPage('login'); api.openPortal?.(sessionId); onStatus() }}>http://10.8.0.22/login</button>
+            <button type="button" className="linkish" onClick={() => { setUrl(TARGET.url); setPage('login'); api.openPortal?.(sessionId); onStatus() }}>{TARGET.url}</button>
           </div>
         )}
         {page === 'fail' && <div className="fx-home"><h2>Hmm. We cannot find that site.</h2></div>}
@@ -151,6 +155,7 @@ function FirefoxApp({ sessionId, onStatus }) {
           <div className="portal">
             <div className="portal-brand">NEXORA</div>
             <h1>Employee Portal</h1>
+            <p>http://10.8.0.22/login</p>
             <form onSubmit={submitLogin}>
               <label>Username</label>
               <input value={user} onChange={(e) => setUser(e.target.value)} />
@@ -178,6 +183,21 @@ function FirefoxApp({ sessionId, onStatus }) {
   )
 }
 
+function NetworkApp() {
+  return (
+    <div className="netmap">
+      <p>lab net {TARGET.cidr}  tun0 UP</p>
+      <div className="net-row">
+        <div className="net-node"><b>kali</b>{TARGET.client}</div>
+        <div className="net-line" />
+        <div className="net-node"><b>gw</b>{TARGET.gateway}</div>
+        <div className="net-line" />
+        <div className="net-node target"><b>portal.nexora.lab</b>{TARGET.host}:80</div>
+      </div>
+    </div>
+  )
+}
+
 const COMMANDS_WORDLIST = 'admin123\npassword\nletmein\nqwerty\nbisha\nnexora\nwelcome1'
 
 function FilesApp() {
@@ -185,7 +205,6 @@ function FilesApp() {
     <div className="thunar">
       <aside><b>Places</b><span>Home</span><span>Desktop</span><span>Documents</span></aside>
       <section>
-        <div className="file-row">Desktop</div>
         <div className="file-row">wordlist.txt</div>
         <div className="file-row">flag.txt</div>
         <pre>{COMMANDS_WORDLIST}</pre>
@@ -199,8 +218,9 @@ function KaliDesktop({ session, lines, onCommand, onFlag, onLock, flagMsg, recei
   const [now, setNow] = useState(() => new Date())
   const [flag, setFlag] = useState('')
   const [wins, setWins] = useState({
-    terminal: { open: true, z: 4, x: 92, y: 78, w: 740, h: 440 },
-    browser: { open: false, z: 3, x: 210, y: 46, w: 860, h: 560 },
+    terminal: { open: true, z: 5, x: 108, y: 300, w: 720, h: 320 },
+    browser: { open: true, z: 4, x: 220, y: 46, w: 820, h: 430 },
+    net: { open: true, z: 3, x: 108, y: 46, w: 520, h: 180 },
     files: { open: false, z: 2, x: 280, y: 130, w: 560, h: 360 },
     notes: { open: false, z: 2, x: 420, y: 170, w: 380, h: 280 },
   })
@@ -243,6 +263,7 @@ function KaliDesktop({ session, lines, onCommand, onFlag, onLock, flagMsg, recei
           <DragonMark size={16} /> Applications
         </button>
         <span className="panel-places">Places</span>
+        <span className="wifi">tun0 10.8.0.10</span>
         <span className="panel-mid">{mm}:{ss}</span>
         <span className="panel-right">
           <span>{formatClock(now)}</span>
@@ -253,6 +274,7 @@ function KaliDesktop({ session, lines, onCommand, onFlag, onLock, flagMsg, recei
         <nav className="appmenu" onClick={(e) => e.stopPropagation()}>
           <button type="button" onClick={() => focus('terminal')}><IconTerminal /> QTerminal</button>
           <button type="button" onClick={() => focus('browser')}><IconFirefox /> Firefox ESR</button>
+          <button type="button" onClick={() => focus('net')}><IconNet /> Lab Network</button>
           <button type="button" onClick={() => focus('files')}><IconFolder /> Thunar</button>
           <button type="button" onClick={() => focus('notes')}><IconNotes /> Mousepad</button>
         </nav>
@@ -260,29 +282,35 @@ function KaliDesktop({ session, lines, onCommand, onFlag, onLock, flagMsg, recei
       <div className="desk-icons">
         <button type="button" onClick={() => focus('terminal')}><IconTerminal />Terminal</button>
         <button type="button" onClick={() => focus('browser')}><IconFirefox />Firefox ESR</button>
+        <button type="button" onClick={() => focus('net')}><IconNet />Lab Net</button>
         <button type="button" onClick={() => focus('files')}><IconFolder />Home</button>
         <button type="button" onClick={() => focus('notes')}><IconNotes />Lab Notes</button>
       </div>
+      {wins.net.open && (
+        <WindowFrame title="lab-net 10.8.0.0/24" z={wins.net.z} x={wins.net.x} y={wins.net.y} w={wins.net.w} h={wins.net.h} onFocus={() => focus('net')} onClose={() => close('net')} onDragStart={(e) => startDrag('net', e)}>
+          <NetworkApp />
+        </WindowFrame>
+      )}
       {wins.terminal.open && (
-        <WindowFrame title="bisha@kali: ~" icon="" z={wins.terminal.z} x={wins.terminal.x} y={wins.terminal.y} w={wins.terminal.w} h={wins.terminal.h} onFocus={() => focus('terminal')} onClose={() => close('terminal')} onDragStart={(e) => startDrag('terminal', e)}>
+        <WindowFrame title="bisha@kali: ~" z={wins.terminal.z} x={wins.terminal.x} y={wins.terminal.y} w={wins.terminal.w} h={wins.terminal.h} onFocus={() => focus('terminal')} onClose={() => close('terminal')} onDragStart={(e) => startDrag('terminal', e)}>
           <TerminalApp lines={lines} onCommand={onCommand} />
         </WindowFrame>
       )}
       {wins.browser.open && (
-        <WindowFrame title="Mozilla Firefox ESR" icon="" z={wins.browser.z} x={wins.browser.x} y={wins.browser.y} w={wins.browser.w} h={wins.browser.h} onFocus={() => focus('browser')} onClose={() => close('browser')} onDragStart={(e) => startDrag('browser', e)}>
+        <WindowFrame title="Mozilla Firefox ESR" z={wins.browser.z} x={wins.browser.x} y={wins.browser.y} w={wins.browser.w} h={wins.browser.h} onFocus={() => focus('browser')} onClose={() => close('browser')} onDragStart={(e) => startDrag('browser', e)}>
           <FirefoxApp sessionId={session.session_id} onStatus={onRefresh} />
         </WindowFrame>
       )}
       {wins.files.open && (
-        <WindowFrame title="Home" icon="" z={wins.files.z} x={wins.files.x} y={wins.files.y} w={wins.files.w} h={wins.files.h} onFocus={() => focus('files')} onClose={() => close('files')} onDragStart={(e) => startDrag('files', e)}>
+        <WindowFrame title="Home" z={wins.files.z} x={wins.files.x} y={wins.files.y} w={wins.files.w} h={wins.files.h} onFocus={() => focus('files')} onClose={() => close('files')} onDragStart={(e) => startDrag('files', e)}>
           <FilesApp />
         </WindowFrame>
       )}
       {wins.notes.open && (
-        <WindowFrame title="lab-notes.txt" icon="" z={wins.notes.z} x={wins.notes.x} y={wins.notes.y} w={wins.notes.w} h={wins.notes.h} onFocus={() => focus('notes')} onClose={() => close('notes')} onDragStart={(e) => startDrag('notes', e)}>
+        <WindowFrame title="lab-notes.txt" z={wins.notes.z} x={wins.notes.x} y={wins.notes.y} w={wins.notes.w} h={wins.notes.h} onFocus={() => focus('notes')} onClose={() => close('notes')} onDragStart={(e) => startDrag('notes', e)}>
           <div className="notes">
-            <p>Target: {TARGET.host}</p>
-            <p>http://10.8.0.22/login</p>
+            <p>tun0 {TARGET.client}/24</p>
+            <p>{TARGET.url}</p>
             <code>hydra -l bisha -P wordlist.txt 10.8.0.22 http-post-form "/login:username=^USER^&password=^PASS^:Invalid"</code>
           </div>
         </WindowFrame>
@@ -337,6 +365,7 @@ export default function App() {
     setLines(api.getTerminal(session.session_id))
   }
   if (!auth || view === 'login') return <LockScreen onSuccess={enterDesktop} />
+  if (!session) return <LockScreen onSuccess={enterDesktop} />
   return (
     <KaliDesktop
       session={session}
