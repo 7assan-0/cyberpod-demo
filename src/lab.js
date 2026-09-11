@@ -6,7 +6,7 @@ export const COMMANDS = {
     '  nmap 10.8.0.22       scan the training target',
     '  services             list discovered services',
     '  hydra -l admin -P wordlist.txt ssh://10.8.0.22',
-    '  cat flag.txt         read flag after Hydra succeeds',
+    '  cat flag.txt         read the session-bound flag after Hydra',
     '  clear                clear the terminal',
   ],
   whoami: ['kali@cyberpod — student / demo mode'],
@@ -25,12 +25,8 @@ export const COMMANDS = {
   hydra: [
     'Hydra v9.5 starting at demo-lab',
     '[DATA] attacking ssh://10.8.0.22:22/',
-    '[22][ssh] host: 10.8.0.22   login: admin   password: labpass123',
+    '[22][ssh] host: 10.8.0.22   login: admin   password: ********',
     '1 of 1 target successfully completed, 1 valid password found',
-    '[NOTICE] credentials saved to /home/kali/hydra-result.txt',
-  ],
-  cat: [
-    'admin@10.8.0.22:~$ cat /root/flag.txt',
-    'CYBERPOD{hydra_ssh_cracked}',
+    '[NOTICE] credentials saved to session-private storage',
   ],
 }

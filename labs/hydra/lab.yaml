@@ -3,6 +3,7 @@ name: Hydra Lab
 description: Demo-only Hydra SSH lab used by the Chrome walkthrough.
 difficulty: beginner
 category: Brute Force
+status: AVAILABLE
 estimated_duration_minutes: 20
 time_limit_seconds: 1200
 required_tools:
@@ -11,23 +12,23 @@ required_tools:
 tasks:
   - id: recon
     title: Nmap recon
-    description: nmap 10.8.0.22
+    description: Scan the training target.
     points: 20
   - id: identify
     title: Identify SSH
-    description: services
+    description: Confirm the exposed service.
     points: 15
   - id: hydra
     title: Run Hydra
-    description: hydra against training target
+    description: Authenticate against the training target.
     points: 30
   - id: creds
     title: Recover credentials
-    description: read hydra result
+    description: Read the session-private result.
     points: 15
   - id: submit
     title: Submit flag
-    description: CYBERPOD{hydra_ssh_cracked}
+    description: Submit the flag issued to this session.
     points: 20
 browser_requirements:
   - chrome
