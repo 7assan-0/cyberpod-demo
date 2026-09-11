@@ -24,7 +24,7 @@ const HYDRA_LAB = {
     { id: 'identify', title: 'تحديد خدمة SSH', description: 'services', points: 15 },
     { id: 'hydra', title: 'تشغيل Hydra على SSH', description: 'hydra -l admin -P wordlist.txt ssh://10.8.0.22', points: 30 },
     { id: 'creds', title: 'الحصول على بيانات الدخول', description: 'بعد نجاح Hydra', points: 15 },
-    { id: 'submit', title: 'تسليم الـ Flag', description: 'CYBERPOD{...}', points: 20 },
+    { id: 'submit', title: 'تسليم الـ Flag', description: 'Submit the session flag', points: 20 },
   ],
   max_score: 100,
   instructions: ['سجّل دخول', 'ابدأ الجلسة', 'نفّذ الأوامر', 'سلّم علم هذه الجلسة'],
@@ -59,6 +59,10 @@ function requireAuth() {
   if (Date.now() - db.loggedAt > SESSION_MS) { db.user = null; persist(); error('SESSION_EXPIRED') }
 }
 function getRow(sessionId) { return db.sessions[sessionId] }
+function leaked(session, rowId) {
+  const issued = runtimeSecrets[rowId]
+  return Boolean(issued && JSON.stringify(session).includes(issued))
+}
 function toSession(row) {
   const completed = row.done
   const tasks = HYDRA_LAB.tasks.map((t, i) => {
@@ -80,7 +84,7 @@ function toSession(row) {
     target: { host: '10.8.0.22', name: 'target.cyberpod.local', ports: ['22/tcp ssh'], status: running ? 'READY' : 'UNKNOWN' },
     error: null,
   }
-  if (JSON.stringify(session).includes('CYBERPOD{')) error('SECRET_LEAK')
+  if (leaked(session, row.id)) error('SECRET_LEAK')
   return session
 }
 async function issueFlag(row) {
