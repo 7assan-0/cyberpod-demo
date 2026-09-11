@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { api, DEMO_MODE } from './api/client.js'
+import { api } from './api/client.js'
 import { DEMO, TARGET } from './api/mock.js'
 import { DragonMark, IconFirefox, IconFolder, IconNotes, IconTerminal } from './icons.jsx'
 
@@ -28,7 +28,7 @@ function formatDate(date) {
   return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
-function LockScreen({ onSuccess, hint = true, title = 'bisha' }) {
+function LockScreen({ onSuccess, title = 'bisha' }) {
   const [email, setEmail] = useState(DEMO.email || 'bisha')
   const [password, setPassword] = useState('bisha')
   const [error, setError] = useState('')
@@ -49,7 +49,7 @@ function LockScreen({ onSuccess, hint = true, title = 'bisha' }) {
     <div className="lock" dir="ltr">
       <div className="lock-top">
         <span>Kali GNU/Linux Rolling</span>
-        <span>{DEMO_MODE ? 'simulated session' : 'LIVE'}</span>
+        <span>{formatClock(now)}</span>
       </div>
       <div className="lock-clock">
         <div className="lock-time">{formatClock(now)}</div>
@@ -62,7 +62,6 @@ function LockScreen({ onSuccess, hint = true, title = 'bisha' }) {
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" placeholder="Password" />
         {error && <div className="error">{error}</div>}
         <button className="btn" type="submit">Unlock</button>
-        {hint && <small>bisha / bisha</small>}
       </form>
     </div>
   )
@@ -168,8 +167,8 @@ function FirefoxApp({ sessionId, onStatus }) {
             <section>
               <h2>Welcome, {TARGET.user}</h2>
               <article>
-                <header>IT Security - session token</header>
-                <code>{flag || api.getPortalFlag?.(sessionId) || 'flag issued after Hydra / login'}</code>
+                <header>Inbox</header>
+                <code>{flag || api.getPortalFlag?.(sessionId) || ''}</code>
               </article>
             </section>
           </div>
@@ -283,7 +282,7 @@ function KaliDesktop({ session, lines, onCommand, onFlag, onLock, flagMsg, recei
         <WindowFrame title="lab-notes.txt" icon="" z={wins.notes.z} x={wins.notes.x} y={wins.notes.y} w={wins.notes.w} h={wins.notes.h} onFocus={() => focus('notes')} onClose={() => close('notes')} onDragStart={(e) => startDrag('notes', e)}>
           <div className="notes">
             <p>Target: {TARGET.host}</p>
-            <p>Firefox - http://10.8.0.22/login</p>
+            <p>http://10.8.0.22/login</p>
             <code>hydra -l bisha -P wordlist.txt 10.8.0.22 http-post-form "/login:username=^USER^&password=^PASS^:Invalid"</code>
           </div>
         </WindowFrame>
@@ -319,10 +318,6 @@ export default function App() {
   const [lines, setLines] = useState(restored.lines || [])
   const [flagMsg, setFlagMsg] = useState('')
   const [receivedAt, setReceivedAt] = useState(() => performance.now())
-  useEffect(() => {
-    const id = setInterval(() => {}, 1000)
-    return () => clearInterval(id)
-  }, [])
   function acceptSession(next) {
     setSession(next)
     setReceivedAt(performance.now())
