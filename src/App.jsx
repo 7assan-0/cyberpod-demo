@@ -10,6 +10,15 @@ function safeRestore() {
   }
 }
 
+function remainingSeconds(session, receivedAt) {
+  if (!session?.expires_at || !session?.server_time) return 0
+  const exp = Date.parse(session.expires_at)
+  const server = Date.parse(session.server_time)
+  if (Number.isNaN(exp) || Number.isNaN(server)) return 0
+  const elapsed = (performance.now() - receivedAt) / 1000
+  return Math.max(0, Math.floor((exp - server) / 1000 - elapsed))
+}
+
 function Topbar({ user, view, onLogout }) {
   return (
     <header className="topbar">
@@ -57,6 +66,7 @@ function Login({ onSuccess }) {
 
 function LabHome({ lab, session, onStart }) {
   const score = session?.score?.earned || 0
+  const max = session?.score?.max || lab.max_score
   const progress = session?.progress_percent || 0
   return (
     <div className="page">
@@ -70,12 +80,14 @@ function LabHome({ lab, session, onStart }) {
           <h2>{lab.name}</h2>
           <div className="stats">
             <div className="stat"><b>{lab.difficulty}</b>المستوى</div>
-            <div className="stat"><b>{score}/{lab.max_score}</b>النقاط</div>
+            <div className="stat"><b>{score}/{max}</b>النقاط</div>
             <div className="stat"><b>{progress}%</b>التقدم</div>
             <div className="stat"><b>{lab.estimated_duration_minutes}د</b>الوقت</div>
           </div>
           <div className="progress"><span style={{ width: progress + '%' }} /></div>
-          <div style={{ marginTop: 18 }}><button className="btn" onClick={onStart}>Start Lab</button></div>
+          <div style={{ marginTop: 18 }}>
+            <button className="btn" onClick={onStart}>Start Lab</button>
+          </div>
         </article>
         <article className="card">
           <h3>الأهداف</h3>
@@ -86,12 +98,12 @@ function LabHome({ lab, session, onStart }) {
   )
 }
 
-function Workspace({ session, lines, onCommand, onFlag, onBack, flagMsg }) {
+function Workspace({ session, lines, onCommand, onFlag, onBack, flagMsg, receivedAt }) {
   const [flag, setFlag] = useState('')
   const [cmd, setCmd] = useState('')
   const endRef = useRef(null)
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [lines])
-  const remain = session.expires_at ? Math.max(0, Math.floor((new Date(session.expires_at) - Date.now()) / 1000)) : 0
+  const remain = remainingSeconds(session, receivedAt)
   const mm = String(Math.floor(remain / 60)).padStart(2, '0')
   const ss = String(remain % 60).padStart(2, '0')
   return (
@@ -122,8 +134,8 @@ function Workspace({ session, lines, onCommand, onFlag, onBack, flagMsg }) {
         <form className="flag-box" onSubmit={(e) => { e.preventDefault(); onFlag(flag) }}>
           <strong>Submit Flag</strong>
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-            <input value={flag} onChange={(e) => setFlag(e.target.value)} placeholder="CYBERPOD{...}" maxLength={128} />
-            <button className="btn" type="submit">Submit</button>
+            <input value={flag} onChange={(e) => setFlag(e.target.value)} placeholder="CYBERPOD{...}" maxLength={4096} disabled={!session.flag?.can_submit} />
+            <button className="btn" type="submit" disabled={!session.flag?.can_submit}>Submit</button>
           </div>
           {flagMsg && <p className={session.flag?.status === 'ACCEPTED' ? 'success' : 'error'}>{flagMsg}</p>}
         </form>
@@ -143,11 +155,16 @@ export default function App() {
   const [view, setView] = useState(restored.view || 'login')
   const [lines, setLines] = useState(restored.lines || [])
   const [flagMsg, setFlagMsg] = useState('')
+  const [receivedAt, setReceivedAt] = useState(() => performance.now())
   const [, setTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 1000)
     return () => clearInterval(id)
   }, [])
+  function acceptSession(next) {
+    setSession(next)
+    setReceivedAt(performance.now())
+  }
   if (!auth) return <Login onSuccess={async (next) => {
     setAuth(next)
     setLab((await api.listLabs()).labs[0])
@@ -159,18 +176,18 @@ export default function App() {
         await api.logout(); setAuth(null); setSession(null); setLines([]); setFlagMsg(''); setView('login')
       }} />
       {view === 'workspace' && session ? (
-        <Workspace session={session} lines={lines} flagMsg={flagMsg} onBack={() => { api.setView('lab'); setView('lab') }}
+        <Workspace session={session} lines={lines} flagMsg={flagMsg} receivedAt={receivedAt} onBack={() => { api.setView('lab'); setView('lab') }}
           onCommand={(cmd) => {
             api.runCommand(session.session_id, cmd)
             api.getSessionStatus(session.session_id).then((r) => {
-              setSession(r.session)
+              acceptSession(r.session)
               setLines(api.getTerminal(session.session_id))
             })
           }}
           onFlag={async (flag) => {
             try {
-              const res = await api.submitFlag(session.session_id, { flag, expected_revision: api.getRevision(session.session_id) })
-              setSession(res.session)
+              const res = await api.submitFlag(session.session_id, { flag, expected_revision: api.getRevision(session) })
+              acceptSession(res.session)
               setFlagMsg(res.result)
             } catch (err) {
               setFlagMsg(err.message || 'ERROR')
@@ -180,8 +197,10 @@ export default function App() {
       ) : lab ? (
         <LabHome lab={lab} session={session} onStart={async () => {
           const created = await api.createSession(lab.id)
-          const started = await api.startSession(created.session.session_id)
-          setSession(started.session)
+          const started = created.session?.capabilities?.can_start === false
+            ? created
+            : await api.startSession(created.session.session_id)
+          acceptSession(started.session)
           setLines(api.getTerminal(started.session.session_id))
           setFlagMsg('')
           setView('workspace')
