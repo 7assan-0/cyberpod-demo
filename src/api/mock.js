@@ -1,4 +1,4 @@
-import { COMMANDS } from '../lab.js'
+import { COMMANDS, TARGET } from '../lab.js'
 import { credentialsMatch, hashEquals, randomToken, RateGate, sha256hex } from '../security.js'
 
 const DEMO = { email: 'demo@cyberpod.local' }
@@ -11,23 +11,23 @@ const runtimeSecrets = {}
 const HYDRA_LAB = {
   id: 'hydra-ssh-101',
   name: 'Hydra Lab',
-  description: 'مختبر تدريب SSH.',
+  description: 'سطح كالي محاكى. اكتشف بوابة Nexora ثم اكسرها بـ Hydra.',
   difficulty: 'Beginner',
   category: 'Brute Force',
   estimated_duration_minutes: 20,
   time_limit_seconds: 20 * 60,
-  required_tools: ['nmap', 'hydra'],
+  required_tools: ['nmap', 'hydra', 'firefox'],
   status: 'AVAILABLE',
-  objectives: ['اكتشاف خدمة SSH', 'تشغيل Hydra', 'تسليم علم الجلسة'],
+  objectives: ['امسح الهدف', 'افتح الموقع الافتراضي', 'شغّل Hydra', 'ادخل للموقع', 'سلّم العلم'],
   tasks: [
     { id: 'recon', title: 'استطلاع الهدف بـ Nmap', description: 'امسح الهدف التدريبي', points: 20 },
-    { id: 'identify', title: 'تحديد خدمة SSH', description: 'أكد الخدمة المكشوفة', points: 15 },
-    { id: 'hydra', title: 'تشغيل Hydra على SSH', description: 'حاول الدخول على الهدف التدريبي', points: 30 },
-    { id: 'creds', title: 'الحصول على بيانات الدخول', description: 'اقرأ نتيجة الجلسة الخاصة', points: 15 },
+    { id: 'identify', title: 'تحديد بوابة الويب', description: 'أكد خدمة HTTP وافتح الموقع', points: 15 },
+    { id: 'hydra', title: 'تشغيل Hydra على الموقع', description: 'اكسر نموذج تسجيل الدخول', points: 30 },
+    { id: 'creds', title: 'الدخول للموقع بالبيانات', description: 'سجّل دخول في بوابة Nexora', points: 15 },
     { id: 'submit', title: 'تسليم الـ Flag', description: 'سلّم العلم الصادر لهذه الجلسة', points: 20 },
   ],
   max_score: 100,
-  instructions: ['سجّل دخول', 'أنشئ الجلسة ثم ابدأ', 'نفّذ الأوامر', 'سلّم علم هذه الجلسة'],
+  instructions: ['سجّل دخول', 'ابدأ المختبر', 'افتح الترمينال والمتصفح', 'سلّم علم هذه الجلسة'],
 }
 
 const now = () => new Date().toISOString()
@@ -133,6 +133,10 @@ async function issueFlag(row) {
   row.flagHash = await sha256hex(flag)
 }
 
+function mark(row, id) {
+  if (!row.done.includes(id)) row.done.push(id)
+}
+
 export const mockApi = {
   restore() {
     if (!db.user) return { auth: null, lab: null, session: null, view: 'login', lines: [] }
@@ -152,7 +156,7 @@ export const mockApi = {
   async login({ email, password }) {
     if (!logins.check()) error('RATE_LIMITED')
     if (!(await credentialsMatch(email, password))) error('INVALID_CREDENTIALS')
-    db.user = { id: 'demo-student', display_name: 'Demo Student' }
+    db.user = { id: 'demo-student', display_name: 'kali' }
     db.csrf = randomToken()
     db.loggedAt = Date.now()
     db.view = 'lab'
@@ -201,7 +205,18 @@ export const mockApi = {
       flagAccepted: false,
       flagWrong: false,
       flagHash: '',
-      termLines: ['CyberPod Demo Workspace', 'Type `help` to begin.', ''],
+      portalUnlocked: false,
+      termLines: [
+        'Linux kali 6.8.11-amd64 x86_64 GNU/Linux',
+        'The programs included with the Kali GNU/Linux system are free software;',
+        'the exact distribution terms for each program are described in the',
+        'individual files in /usr/share/doc/*/copyright.',
+        '',
+        'Kali GNU/Linux comes with ABSOLUTELY NO WARRANTY, to the extent',
+        'permitted by applicable law.',
+        'Type `help` to list lab commands.',
+        '',
+      ],
     }
     db.sessions[id] = row
     db.activeSessionId = id
@@ -248,6 +263,7 @@ export const mockApi = {
     row.flagAccepted = false
     row.flagWrong = false
     row.flagHash = ''
+    row.portalUnlocked = false
     row.status = 'CREATED'
     row.started_at = null
     row.expires_at = null
@@ -274,7 +290,7 @@ export const mockApi = {
       return { submission_id, result: 'ALREADY_ACCEPTED', session: toSession(row) }
     }
     if (await hashEquals(value, row.flagHash)) {
-      if (!row.done.includes('submit')) row.done.push('submit')
+      mark(row, 'submit')
       row.flagAccepted = true
       row.revision += 1
       persist()
@@ -285,12 +301,38 @@ export const mockApi = {
     persist()
     return { submission_id, result: 'INCORRECT', session: toSession(row) }
   },
+  loginPortal(sessionId, username, password) {
+    const row = getRow(sessionId)
+    if (!row || row.status !== 'RUNNING') return { ok: false, reason: 'offline' }
+    const userOk = String(username || '').trim() === TARGET.user
+    const passOk = String(password || '') === TARGET.pass
+    if (!userOk || !passOk) return { ok: false, reason: 'invalid' }
+    row.portalUnlocked = true
+    mark(row, 'identify')
+    mark(row, 'creds')
+    row.revision += 1
+    persist()
+    return { ok: true, flag: runtimeSecrets[sessionId] || null }
+  },
+  openPortal(sessionId) {
+    const row = getRow(sessionId)
+    if (!row) return
+    mark(row, 'identify')
+    row.revision += 1
+    persist()
+  },
+  getPortalFlag(sessionId) {
+    const row = getRow(sessionId)
+    if (!row?.portalUnlocked) return null
+    return runtimeSecrets[sessionId] || null
+  },
   runCommand(sessionId, raw) {
     const row = getRow(sessionId)
     if (!row) return ['session not found']
-    const clean = String(raw || '').replace(/[\u0000-\u001f]/g, '').slice(0, 180)
+    const clean = String(raw || '').replace(/[\u0000-\u001f]/g, '').slice(0, 220)
     const lower = clean.trim().toLowerCase()
-    row.termLines.push('kali@cyberpod:~$ ' + clean.trim())
+    row.termLines.push('┌──(kali㉿kali)-[~]')
+    row.termLines.push('└─$ ' + clean.trim())
     if (lower === 'clear') {
       row.termLines = []
       persist()
@@ -299,25 +341,29 @@ export const mockApi = {
     let output = ['command not found. type `help`']
     if (lower === 'help') output = COMMANDS.help
     if (lower === 'whoami') output = COMMANDS.whoami
+    if (lower === 'pwd') output = COMMANDS.pwd
+    if (lower === 'ls' || lower.startsWith('ls ')) output = COMMANDS.ls
     if (lower.startsWith('nmap')) {
       output = COMMANDS.nmap
-      if (!row.done.includes('recon')) row.done.push('recon')
+      mark(row, 'recon')
     }
-    if (lower === 'services') {
-      output = COMMANDS.services
-      if (!row.done.includes('identify')) row.done.push('identify')
+    if (lower.startsWith('curl') || lower === 'services') {
+      output = COMMANDS.curl
+      mark(row, 'identify')
     }
     if (lower.startsWith('hydra')) {
       output = COMMANDS.hydra
-      if (!row.done.includes('hydra')) row.done.push('hydra')
-      if (!row.done.includes('creds')) row.done.push('creds')
+      mark(row, 'hydra')
+      mark(row, 'creds')
     }
-    if (lower.startsWith('cat')) {
+    if (lower.includes('wordlist') && (lower.startsWith('cat') || lower.startsWith('less') || lower.startsWith('more'))) {
+      output = COMMANDS.wordlist
+    }
+    if (lower.startsWith('cat flag') || lower === 'cat flag.txt') {
       const issued = runtimeSecrets[sessionId]
-      output = issued
-        ? ['flag is bound to this session generation:', issued]
-        : ['flag is bound to this session and is not in lab metadata']
-      if (!row.done.includes('creds')) row.done.push('creds')
+      output = row.done.includes('hydra') && issued
+        ? [issued]
+        : ['cat: flag.txt: Permission denied — complete the Hydra attack first']
     }
     row.termLines.push(...output, '')
     row.revision += 1
@@ -333,4 +379,4 @@ export const mockApi = {
   },
 }
 
-export { HYDRA_LAB, DEMO }
+export { HYDRA_LAB, DEMO, TARGET }
