@@ -28,9 +28,9 @@ function formatDate(date) {
   return date.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
-function LockScreen({ onSuccess, hint = true, title = 'kali' }) {
-  const [email, setEmail] = useState(DEMO.email)
-  const [password, setPassword] = useState('')
+function LockScreen({ onSuccess, hint = true, title = 'bisha' }) {
+  const [email, setEmail] = useState(DEMO.email || 'bisha')
+  const [password, setPassword] = useState('bisha')
   const [error, setError] = useState('')
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
@@ -62,7 +62,7 @@ function LockScreen({ onSuccess, hint = true, title = 'kali' }) {
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" placeholder="Password" />
         {error && <div className="error">{error}</div>}
         <button className="btn" type="submit">Unlock</button>
-        {hint && <small>demo@cyberpod.local / CyberPodDemo123!</small>}
+        {hint && <small>bisha / bisha</small>}
       </form>
     </div>
   )
@@ -94,7 +94,7 @@ function TerminalApp({ lines, onCommand }) {
         <div ref={endRef} />
       </div>
       <form onSubmit={(e) => { e.preventDefault(); if (!cmd.trim()) return; onCommand(cmd); setCmd('') }}>
-        <span className="prompt">kali@kali:~</span>
+        <span className="prompt">bisha@kali:~</span>
         <div className="prompt-row">
           <span>$</span>
           <input ref={inputRef} value={cmd} onChange={(e) => setCmd(e.target.value)} maxLength={220} spellCheck={false} autoComplete="off" />
@@ -107,8 +107,8 @@ function TerminalApp({ lines, onCommand }) {
 function FirefoxApp({ sessionId, onStatus }) {
   const [url, setUrl] = useState(TARGET.url)
   const [page, setPage] = useState('login')
-  const [user, setUser] = useState('admin')
-  const [pass, setPass] = useState('')
+  const [user, setUser] = useState(TARGET.user)
+  const [pass, setPass] = useState(TARGET.pass)
   const [error, setError] = useState('')
   const [flag, setFlag] = useState(null)
   function go(e) {
@@ -179,7 +179,7 @@ function FirefoxApp({ sessionId, onStatus }) {
   )
 }
 
-const COMMANDS_WORDLIST = 'admin123\npassword\nletmein\nqwerty\nsummer2024\nnexora\nwelcome1'
+const COMMANDS_WORDLIST = 'admin123\npassword\nletmein\nqwerty\nbisha\nnexora\nwelcome1'
 
 function FilesApp() {
   return (
@@ -265,7 +265,7 @@ function KaliDesktop({ session, lines, onCommand, onFlag, onLock, flagMsg, recei
         <button type="button" onClick={() => focus('notes')}><IconNotes />Lab Notes</button>
       </div>
       {wins.terminal.open && (
-        <WindowFrame title="kali@kali: ~" icon="" z={wins.terminal.z} x={wins.terminal.x} y={wins.terminal.y} w={wins.terminal.w} h={wins.terminal.h} onFocus={() => focus('terminal')} onClose={() => close('terminal')} onDragStart={(e) => startDrag('terminal', e)}>
+        <WindowFrame title="bisha@kali: ~" icon="" z={wins.terminal.z} x={wins.terminal.x} y={wins.terminal.y} w={wins.terminal.w} h={wins.terminal.h} onFocus={() => focus('terminal')} onClose={() => close('terminal')} onDragStart={(e) => startDrag('terminal', e)}>
           <TerminalApp lines={lines} onCommand={onCommand} />
         </WindowFrame>
       )}
@@ -284,7 +284,7 @@ function KaliDesktop({ session, lines, onCommand, onFlag, onLock, flagMsg, recei
           <div className="notes">
             <p>Target: {TARGET.host}</p>
             <p>Firefox - http://10.8.0.22/login</p>
-            <code>hydra -l admin -P wordlist.txt 10.8.0.22 http-post-form "/login:username=^USER^&password=^PASS^:Invalid"</code>
+            <code>hydra -l bisha -P wordlist.txt 10.8.0.22 http-post-form "/login:username=^USER^&password=^PASS^:Invalid"</code>
           </div>
         </WindowFrame>
       )}
