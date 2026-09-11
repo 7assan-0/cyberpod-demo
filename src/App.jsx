@@ -117,7 +117,7 @@ function FirefoxApp({ sessionId, onStatus }) {
   function go(e) {
     e?.preventDefault()
     const raw = url.trim().toLowerCase()
-    if (raw.includes('10.8.0.22') || raw.includes('portal.nexora.lab') || raw.includes('nexora')) {
+    if (raw.includes('10.8.0.22') || raw.includes('bank.nirs.lab') || raw.includes('nirs')) {
       api.openPortal?.(sessionId)
       onStatus()
       setPage(flag ? 'inbox' : 'login')
@@ -134,7 +134,7 @@ function FirefoxApp({ sessionId, onStatus }) {
     <div className="fx">
       <div className="fx-chrome">
         <div className="fx-tabs">
-          <span className="fx-tab on">{page === 'inbox' ? 'Inbox - Nexora' : 'Nexora Employee Portal'}</span>
+          <span className="fx-tab on">{page === 'inbox' ? 'Nirs Staff Console' : 'Nirs Central Bank'}</span>
           <span className="fx-tab">+</span>
         </div>
         <form className="fx-bar" onSubmit={go}>
@@ -153,9 +153,9 @@ function FirefoxApp({ sessionId, onStatus }) {
         {page === 'fail' && <div className="fx-home"><h2>Hmm. We cannot find that site.</h2></div>}
         {page === 'login' && (
           <div className="portal">
-            <div className="portal-brand">NEXORA</div>
-            <h1>Employee Portal</h1>
-            <p>http://10.8.0.22/login</p>
+            <div className="portal-brand">NIRS</div>
+            <h1>Central Bank</h1>
+            <p>Staff Online Banking</p>
             <form onSubmit={submitLogin}>
               <label>Username</label>
               <input value={user} onChange={(e) => setUser(e.target.value)} />
@@ -168,11 +168,11 @@ function FirefoxApp({ sessionId, onStatus }) {
         )}
         {page === 'inbox' && (
           <div className="portal-app">
-            <aside><b>Nexora Mail</b><span className="on">Inbox (1)</span><span>Sent</span></aside>
+            <aside><b>Nirs Central Bank</b><span className="on">Accounts</span><span>Transfers</span><span>Audit</span></aside>
             <section>
               <h2>Welcome, {TARGET.user}</h2>
               <article>
-                <header>Inbox</header>
+                <header>Treasury token</header>
                 <code>{flag || api.getPortalFlag?.(sessionId) || ''}</code>
               </article>
             </section>
@@ -192,13 +192,13 @@ function NetworkApp() {
         <div className="net-line" />
         <div className="net-node"><b>gw</b>{TARGET.gateway}</div>
         <div className="net-line" />
-        <div className="net-node target"><b>portal.nexora.lab</b>{TARGET.host}:80</div>
+        <div className="net-node target"><b>bank.nirs.lab</b>{TARGET.host}:80</div>
       </div>
     </div>
   )
 }
 
-const COMMANDS_WORDLIST = 'admin123\npassword\nletmein\nqwerty\nbisha\nnexora\nwelcome1'
+const COMMANDS_WORDLIST = 'admin123\npassword\nletmein\nqwerty\nbisha\nnirs\nwelcome1'
 
 function FilesApp() {
   return (
