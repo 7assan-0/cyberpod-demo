@@ -1,12 +1,11 @@
 import { COMMANDS } from '../lab.js'
+import { credentialsMatch, flagMatches, randomToken, RateGate, sanitizeInput } from '../security.js'
 
-const DEMO = {
-  email: 'demo@cyberpod.local',
-  password: 'CyberPodDemo123!',
-}
-
-const FLAG = 'CYBERPOD{hydra_ssh_cracked}'
+const DEMO = { email: 'demo@cyberpod.local' }
 const STORAGE_KEY = 'cyberpod-demo-state'
+const SESSION_MS = 30 * 60 * 1000
+const logins = new RateGate(5, 5 * 60 * 1000)
+const flags = new RateGate(8, 5 * 60 * 1000)
 
 const HYDRA_LAB = {
   id: 'hydra-ssh-101',
@@ -24,7 +23,7 @@ const HYDRA_LAB = {
     { id: 'identify', title: 'تحديد خدمة SSH', description: 'services', points: 15 },
     { id: 'hydra', title: 'تشغيل Hydra على SSH', description: 'hydra -l admin -P wordlist.txt ssh://10.8.0.22', points: 30 },
     { id: 'creds', title: 'الحصول على بيانات الدخول', description: 'بعد نجاح Hydra', points: 15 },
-    { id: 'submit', title: 'تسليم الـ Flag', description: 'CYBERPOD{hydra_ssh_cracked}', points: 20 },
+    { id: 'submit', title: 'تسليم الـ Flag', description: 'CYBERPOD{...}', points: 20 },
   ],
   max_score: 100,
   instructions: ['سجّل دخول بحساب Demo', 'ابدأ الجلسة من Hydra Lab', 'نفّذ الأوامر داخل Workspace', 'سلّم العلم للحصول على النقاط'],
@@ -32,27 +31,33 @@ const HYDRA_LAB = {
 
 const now = () => new Date().toISOString()
 
+function empty() {
+  return { user: null, csrf: null, sessions: {}, view: 'login', activeSessionId: null, loggedAt: 0 }
+}
+
 function loadState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return { user: null, csrf: null, sessions: {}, view: 'login', activeSessionId: null }
+    const raw = sessionStorage.getItem(STORAGE_KEY)
+    if (!raw) return empty()
     const parsed = JSON.parse(raw)
+    if (parsed.loggedAt && Date.now() - parsed.loggedAt > SESSION_MS) return empty()
     return {
       user: parsed.user || null,
       csrf: parsed.csrf || null,
       sessions: parsed.sessions || {},
       view: parsed.view || (parsed.user ? 'lab' : 'login'),
       activeSessionId: parsed.activeSessionId || null,
+      loggedAt: parsed.loggedAt || 0,
     }
   } catch {
-    return { user: null, csrf: null, sessions: {}, view: 'login', activeSessionId: null }
+    return empty()
   }
 }
 
 const db = loadState()
 
 function persist() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(db))
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(db))
 }
 
 function error(code) {
@@ -63,6 +68,11 @@ function error(code) {
 
 function requireAuth() {
   if (!db.user) error('UNAUTHENTICATED')
+  if (Date.now() - db.loggedAt > SESSION_MS) {
+    db.user = null
+    persist()
+    error('SESSION_EXPIRED')
+  }
 }
 
 function getRow(sessionId) {
@@ -117,9 +127,7 @@ function toSession(row) {
 export const mockApi = {
   restore() {
     if (!db.user) return { auth: null, lab: null, session: null, view: 'login', lines: [] }
-    const session = db.activeSessionId && getRow(db.activeSessionId)
-      ? toSession(getRow(db.activeSessionId))
-      : null
+    const session = db.activeSessionId && getRow(db.activeSessionId) ? toSession(getRow(db.activeSessionId)) : null
     return {
       auth: { user: db.user, csrf_token: db.csrf },
       lab: HYDRA_LAB,
@@ -129,9 +137,11 @@ export const mockApi = {
     }
   },
   async login({ email, password }) {
-    if (email !== DEMO.email || password !== DEMO.password) error('INVALID_CREDENTIALS')
+    if (!logins.check()) error('RATE_LIMITED')
+    if (!(await credentialsMatch(email, password))) error('INVALID_CREDENTIALS')
     db.user = { id: 'demo-student', display_name: 'Demo Student' }
-    db.csrf = 'csrf-demo'
+    db.csrf = randomToken()
+    db.loggedAt = Date.now()
     db.view = 'lab'
     persist()
     return { user: db.user, csrf_token: db.csrf }
@@ -142,6 +152,7 @@ export const mockApi = {
     db.sessions = {}
     db.view = 'login'
     db.activeSessionId = null
+    db.loggedAt = 0
     persist()
     return { ok: true }
   },
@@ -151,7 +162,7 @@ export const mockApi = {
   },
   async createSession(labId) {
     requireAuth()
-    const id = 'ses_' + Math.random().toString(36).slice(2, 10)
+    const id = 'ses_' + randomToken().slice(0, 10)
     const row = {
       id,
       labId,
@@ -200,11 +211,12 @@ export const mockApi = {
   },
   async submitFlag(sessionId, { flag, expected_revision }) {
     requireAuth()
+    if (!flags.check()) error('RATE_LIMITED')
     const row = getRow(sessionId)
     if (!row) error('NOT_FOUND')
     if (expected_revision !== row.revision) error('REVISION_CONFLICT')
-    const submission_id = 'sub_' + Math.random().toString(36).slice(2, 8)
-    if (flag.trim() === FLAG) {
+    const submission_id = 'sub_' + randomToken().slice(0, 8)
+    if (await flagMatches(sanitizeInput(flag, 128))) {
       if (!row.done.includes('submit')) row.done.push('submit')
       row.flagAccepted = true
       row.status = 'COMPLETED'
@@ -220,8 +232,9 @@ export const mockApi = {
   runCommand(sessionId, raw) {
     const row = getRow(sessionId)
     if (!row) return ['session not found']
-    const lower = raw.trim().toLowerCase()
-    row.termLines.push('kali@cyberpod:~$ ' + raw.trim())
+    const clean = sanitizeInput(raw, 180)
+    const lower = clean.trim().toLowerCase()
+    row.termLines.push('kali@cyberpod:~$ ' + clean.trim())
     if (lower === 'clear') {
       row.termLines = []
       persist()
@@ -260,4 +273,4 @@ export const mockApi = {
   },
 }
 
-export { HYDRA_LAB, FLAG, DEMO }
+export { HYDRA_LAB, DEMO }
