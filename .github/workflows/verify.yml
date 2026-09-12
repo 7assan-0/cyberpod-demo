@@ -1,0 +1,62 @@
+name: Verify browser demo
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-failure-traces
+          path: test-results/
+          retention-days: 7
+  student-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: 7assan-0/cyberpod-integration
+          # Pin the companion contract verified by this repair.
+          ref: 392e9ad00fd368946c686d1d5212c022962b4637
+          path: .integration
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - run: python -m pip install -e .integration
+      - run: npx playwright install --with-deps chromium
+      - name: Run browser against the student server
+        run: |
+          python -m cyberpod_integration --demo --labs .integration/labs --database /tmp/cyberpod-live-test.sqlite3 > /tmp/cyberpod-student.log 2>&1 &
+          backend_pid=$!
+          trap 'kill "$backend_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            curl --fail --silent http://127.0.0.1:8000/healthz && break
+            sleep 1
+          done
+          npx playwright test --config playwright.live.config.js
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: student-api-browser-traces
+          path: test-results/
+          retention-days: 7

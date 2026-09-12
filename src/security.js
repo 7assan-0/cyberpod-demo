@@ -3,7 +3,10 @@ const EMAIL_SHA256 = '8b31e003daf9ab33f0678081be064ff627110d1f510701b7e09f4f0f1a
 
 export async function sha256hex(value) {
   const bytes = new TextEncoder().encode(String(value))
-  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  // SubtleCrypto is absent on plain HTTP LAN addresses used for local demos.
+  const digest = globalThis.crypto?.subtle
+    ? await crypto.subtle.digest('SHA-256', bytes)
+    : sha256(bytes)
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
@@ -45,3 +48,4 @@ export class RateGate {
     return true
   }
 }
+import { sha256 } from '@noble/hashes/sha2.js'

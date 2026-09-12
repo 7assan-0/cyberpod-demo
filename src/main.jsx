@@ -7,9 +7,7 @@ const root = document.getElementById('root')
 
 window.addEventListener('error', (event) => {
   if (!root || root.childElementCount) return
-  root.innerHTML = '<pre style="padding:24px;color:#f66;white-space:pre-wrap">'
-    + String(event.error || event.message)
-    + '</pre>'
+  root.textContent = 'Unable to start CyberPod. Reload the page. ' + String(event.error || event.message)
 })
 
 try {

@@ -3,10 +3,14 @@ import { credentialsMatch, hashEquals, randomToken, RateGate, sha256hex } from '
 
 const DEMO = { email: 'bisha' }
 const STORAGE_KEY = 'cyberpod-demo-state'
+const SECRETS_KEY = 'cyberpod-demo-secrets'
 const SESSION_MS = 30 * 60 * 1000
 const logins = new RateGate(5, 5 * 60 * 1000)
 const flags = new RateGate(8, 5 * 60 * 1000)
-const runtimeSecrets = {}
+// This browser-only simulation is not an authentication or scoring authority.
+// Keep attempt secrets across refreshes; never include them in the student DTO.
+let runtimeSecrets = {}
+try { runtimeSecrets = JSON.parse(sessionStorage.getItem(SECRETS_KEY) || '{}') } catch { /* unavailable storage */ }
 
 const HYDRA_LAB = {
   id: 'hydra-ssh-101',
@@ -58,7 +62,10 @@ function persist() {
   Object.values(safe.sessions || {}).forEach((row) => {
     delete row.flagPlain
   })
-  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(safe))
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(safe))
+    sessionStorage.setItem(SECRETS_KEY, JSON.stringify(runtimeSecrets))
+  } catch { /* Continue the in-memory demo if browser storage is unavailable. */ }
 }
 function error(code) {
   const err = new Error(code)
@@ -74,7 +81,15 @@ function requireAuth() {
   }
 }
 function getRow(sessionId) {
-  return db.sessions[sessionId]
+  const row = db.sessions[sessionId]
+  if (row && ['RUNNING', 'STOPPED'].includes(row.status) && Date.parse(row.expires_at) <= Date.now()) {
+    row.status = 'EXPIRED'
+    row.portalUnlocked = false
+    row.revision += 1
+    delete runtimeSecrets[sessionId]
+    persist()
+  }
+  return row
 }
 function leaked(session, rowId) {
   const issued = runtimeSecrets[rowId]
@@ -114,12 +129,12 @@ function toSession(row) {
     capabilities: {
       can_start: row.status === 'CREATED' || row.status === 'STOPPED',
       can_stop: running || row.status === 'STARTING',
-      can_restart: running || row.status === 'STOPPED' || row.status === 'COMPLETED',
+      can_restart: running || row.status === 'STOPPED' || row.status === 'EXPIRED',
     },
     desktop: {
-      status: running || completedRun ? 'READY' : 'UNAVAILABLE',
-      url: running || completedRun ? '/workspace' : null,
-      expires_at: running || completedRun ? row.expires_at : null,
+      status: running ? 'READY' : 'UNAVAILABLE',
+      url: running ? '/workspace' : null,
+      expires_at: running ? row.expires_at : null,
     },
     target: { status: running ? 'READY' : row.status === 'STARTING' ? 'STARTING' : 'UNKNOWN' },
     error: null,
@@ -138,6 +153,7 @@ function mark(row, id) {
 
 export const mockApi = {
   restore() {
+    if (db.user && Date.now() - db.loggedAt > SESSION_MS) db.user = null
     if (!db.user) return { auth: null, lab: null, session: null, view: 'login', lines: [] }
     const session = db.activeSessionId && getRow(db.activeSessionId) ? toSession(getRow(db.activeSessionId)) : null
     return {
@@ -184,7 +200,7 @@ export const mockApi = {
   },
   async listSessions() {
     requireAuth()
-    return { sessions: Object.values(db.sessions).map(toSession).reverse() }
+    return { sessions: Object.keys(db.sessions).map((id) => toSession(getRow(id))).reverse() }
   },
   async createSession(labId) {
     requireAuth()
@@ -228,10 +244,11 @@ export const mockApi = {
     const row = getRow(sessionId)
     if (!row) error('NOT_FOUND')
     if (row.status === 'RUNNING') return { session: toSession(row) }
-    if (!row.flagHash) await issueFlag(row)
+    if (!['CREATED', 'STOPPED'].includes(row.status)) error('INVALID_STATE')
+    if (!row.flagHash || !runtimeSecrets[row.id]) await issueFlag(row)
     row.status = 'RUNNING'
-    row.started_at = now()
-    row.expires_at = new Date(Date.now() + HYDRA_LAB.time_limit_seconds * 1000).toISOString()
+    row.started_at ||= now()
+    row.expires_at ||= new Date(Date.now() + HYDRA_LAB.time_limit_seconds * 1000).toISOString()
     row.revision += 1
     db.view = 'workspace'
     db.activeSessionId = sessionId
@@ -242,7 +259,9 @@ export const mockApi = {
     requireAuth()
     const row = getRow(sessionId)
     if (!row) error('NOT_FOUND')
-    if (row.status !== 'CLEANED') row.status = 'STOPPED'
+    if (['CLEANED', 'STOPPED', 'EXPIRED'].includes(row.status)) return { session: toSession(row) }
+    row.status = 'STOPPED'
+    row.portalUnlocked = false
     row.revision += 1
     persist()
     return { session: toSession(row) }
@@ -251,6 +270,7 @@ export const mockApi = {
     requireAuth()
     const row = getRow(sessionId)
     if (!row) error('NOT_FOUND')
+    if (row.status === 'CLEANED') error('INVALID_STATE')
     delete runtimeSecrets[sessionId]
     row.generation += 1
     row.done = []
@@ -265,6 +285,20 @@ export const mockApi = {
     row.termLines = ['Session restarted.', '']
     persist()
     return this.startSession(sessionId)
+  },
+  async cleanupSession(sessionId) {
+    requireAuth()
+    const row = getRow(sessionId)
+    if (!row) error('NOT_FOUND')
+    row.status = 'CLEANED'
+    row.portalUnlocked = false
+    row.termLines = []
+    row.revision += 1
+    delete runtimeSecrets[sessionId]
+    db.activeSessionId = null
+    db.view = 'lab'
+    persist()
+    return { session: toSession(row) }
   },
   setView(view) {
     db.view = view
@@ -284,6 +318,7 @@ export const mockApi = {
       return { submission_id, result: 'ALREADY_ACCEPTED', session: toSession(row) }
     }
     if (await hashEquals(value, row.flagHash)) {
+      if (!['recon', 'identify', 'hydra', 'creds'].every((id) => row.done.includes(id))) error('TASKS_INCOMPLETE')
       mark(row, 'submit')
       row.flagAccepted = true
       row.revision += 1
@@ -296,6 +331,7 @@ export const mockApi = {
     return { submission_id, result: 'INCORRECT', session: toSession(row) }
   },
   loginPortal(sessionId, username, password) {
+    requireAuth()
     const row = getRow(sessionId)
     if (!row || row.status !== 'RUNNING') return { ok: false, reason: 'offline' }
     const userOk = String(username || '').trim().toLowerCase() === TARGET.user
@@ -309,22 +345,29 @@ export const mockApi = {
     return { ok: true, flag: runtimeSecrets[sessionId] || null }
   },
   openPortal(sessionId) {
+    requireAuth()
     const row = getRow(sessionId)
-    if (!row) return
+    if (!row || row.status !== 'RUNNING' || row.done.includes('identify')) return
     mark(row, 'identify')
     row.revision += 1
     persist()
   },
   getPortalFlag(sessionId) {
+    requireAuth()
     const row = getRow(sessionId)
-    if (!row?.portalUnlocked) return null
+    if (!row?.portalUnlocked || row.status !== 'RUNNING') return null
     return runtimeSecrets[sessionId] || null
   },
   runCommand(sessionId, raw) {
+    requireAuth()
     const row = getRow(sessionId)
     if (!row) return ['session not found']
+    if (row.status !== 'RUNNING') error(row.status === 'EXPIRED' ? 'SESSION_EXPIRED' : 'INVALID_STATE')
     const clean = String(raw || '').replace(/[\u0000-\u001f]/g, '').slice(0, 220)
     const lower = clean.trim().toLowerCase()
+    const tokens = lower.split(/\s+/)
+    const isTarget = tokens.some((token) => [TARGET.host, TARGET.hostname].includes(token)
+      || [TARGET.host, TARGET.hostname].some((host) => token === `http://${host}` || token.startsWith(`http://${host}/`)))
     row.termLines.push('bisha@kali:~$ ' + clean.trim())
     if (lower === 'clear') {
       row.termLines = []
@@ -337,19 +380,20 @@ export const mockApi = {
     if (lower === 'pwd') output = COMMANDS.pwd
     if (lower === 'ls' || lower.startsWith('ls ')) output = COMMANDS.ls
     if (lower === 'ip a' || lower === 'ip addr' || lower === 'ifconfig' || lower === 'ip a s tun0') output = COMMANDS.ip
-    if (lower.startsWith('ping')) {
+    if (tokens[0] === 'ping' && isTarget) {
       output = COMMANDS.ping
-      mark(row, 'recon')
     }
-    if (lower.startsWith('nmap')) {
+    if (tokens[0] === 'nmap' && isTarget) {
       output = COMMANDS.nmap
       mark(row, 'recon')
     }
-    if (lower.startsWith('curl') || lower === 'services') {
+    if ((tokens[0] === 'curl' && isTarget) || lower === 'services') {
       output = COMMANDS.curl
       mark(row, 'identify')
     }
-    if (lower.startsWith('hydra')) {
+    if (tokens[0] === 'hydra' && isTarget && /-l\s+bisha(?:\s|$)/.test(lower)
+      && /-p\s+wordlist\.txt(?:\s|$)/.test(lower) && lower.includes('http-post-form')
+      && lower.includes('/login:username=^user^&password=^pass^:invalid')) {
       output = COMMANDS.hydra
       mark(row, 'hydra')
     }
@@ -358,15 +402,16 @@ export const mockApi = {
     }
     if (lower.startsWith('cat flag') || lower === 'cat flag.txt') {
       const issued = runtimeSecrets[sessionId]
-      output = row.done.includes('hydra') && issued ? [issued] : ['cat: flag.txt: Permission denied']
+      output = row.portalUnlocked && issued ? [issued] : ['cat: flag.txt: Permission denied — sign in to the bank first']
     }
     row.termLines.push(...output, '')
+    row.termLines = row.termLines.slice(-1000)
     row.revision += 1
     persist()
     return row.termLines
   },
   getTerminal(sessionId) {
-    return getRow(sessionId)?.termLines || []
+    return [...(getRow(sessionId)?.termLines || [])]
   },
   getRevision(session) {
     if (session && typeof session === 'object') return Number(session.revision) || 0
