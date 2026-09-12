@@ -119,7 +119,7 @@ function FirefoxApp({ sessionId, onStatus }) {
   const [flag, setFlag] = useState(() => api.getPortalFlag?.(sessionId) || null)
   useEffect(() => {
     if (flag) setPage('inbox')
-    try { api.openPortal?.(sessionId); onStatus() } catch { setError('Session is unavailable') }
+    onStatus()
   }, [sessionId])
   function go(e) {
     e?.preventDefault()
@@ -252,6 +252,9 @@ function KaliDesktop({ session, lines, onCommand, onFlag, onLock, flagMsg, recei
     return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
   }, [])
   function focus(key) {
+    if (key === 'browser') {
+      try { api.openPortal?.(session.session_id); onRefresh() } catch { onRefresh() }
+    }
     setWins((prev) => {
       const max = Math.max(...Object.values(prev).map((w) => w.z))
       return { ...prev, [key]: { ...prev[key], open: true, z: max + 1 } }
