@@ -31,7 +31,7 @@ function formatDate(date) {
 
 function LockScreen({ onSuccess, title = DEMO_MODE ? 'bisha' : 'CyberPod' }) {
   const [email, setEmail] = useState(DEMO_MODE ? DEMO.email : '')
-  const [password, setPassword] = useState(DEMO_MODE ? 'bisha' : '')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const pending = useRef(false)
@@ -74,17 +74,21 @@ function LockScreen({ onSuccess, title = DEMO_MODE ? 'bisha' : 'CyberPod' }) {
   )
 }
 
-function WindowFrame({ title, z, x, y, w, h, onFocus, onClose, onDragStart, children }) {
+function WindowFrame({ title, id, z, x, y, w, h, minimized, maximized, onFocus, onClose, onMinimize, onMaximize, onDragStart, onDragMove, onDragEnd, children }) {
   return (
-    <div className="xfwm" style={{ zIndex: z, left: x, top: y, width: w, height: h }} onMouseDown={onFocus}>
-      <header className="xfwm-bar" onMouseDown={onDragStart}>
+    <section className="xfwm" role="dialog" aria-label={title} data-window={id} hidden={minimized}
+      style={{ zIndex: z, left: x, top: y, width: w, height: h }} onPointerDown={onFocus}>
+      <header className="xfwm-bar" onPointerDown={onDragStart} onPointerMove={onDragMove}
+        onPointerUp={onDragEnd} onPointerCancel={onDragEnd} onLostPointerCapture={onDragEnd} onDoubleClick={onMaximize}>
         <span className="xfwm-title">{title}</span>
-        <span className="xfwm-btns">
-          <i /><i /><button type="button" onClick={onClose} aria-label="Close">X</button>
+        <span className="xfwm-btns" onPointerDown={(event) => event.stopPropagation()} onDoubleClick={(event) => event.stopPropagation()}>
+          <button type="button" onClick={onMinimize} aria-label={`Minimize ${title}`} title="Minimize">−</button>
+          <button type="button" onClick={onMaximize} aria-label={`${maximized ? 'Restore' : 'Maximize'} ${title}`} title={maximized ? 'Restore' : 'Maximize'}>{maximized ? '❐' : '□'}</button>
+          <button type="button" className="xfwm-close" onClick={onClose} aria-label={`Close ${title}`} title="Close">×</button>
         </span>
       </header>
       <div className="xfwm-body">{children}</div>
-    </div>
+    </section>
   )
 }
 
@@ -111,25 +115,25 @@ function TerminalApp({ lines, onCommand }) {
 }
 
 function FirefoxApp({ sessionId, onStatus }) {
-  const [url, setUrl] = useState(TARGET.url)
-  const [page, setPage] = useState('login')
+  const [url, setUrl] = useState('')
+  const [page, setPage] = useState('home')
   const [user, setUser] = useState('')
   const [pass, setPass] = useState('')
   const [error, setError] = useState('')
   const [flag, setFlag] = useState(() => api.getPortalFlag?.(sessionId) || null)
-  useEffect(() => {
-    if (flag) setPage('inbox')
+  function openBank() {
+    api.openPortal?.(sessionId)
     onStatus()
-  }, [sessionId])
+    setUrl(TARGET.url)
+    setPage(flag ? 'inbox' : 'login')
+  }
   function go(e) {
     e?.preventDefault()
     const raw = url.trim().toLowerCase()
     let hostname = ''
     try { hostname = new URL(raw.includes('://') ? raw : `http://${raw}`).hostname } catch { /* show failure below */ }
     if ([TARGET.host, TARGET.hostname].includes(hostname)) {
-      api.openPortal?.(sessionId)
-      onStatus()
-      setPage(flag ? 'inbox' : 'login')
+      openBank()
     } else if (!raw || raw === 'about:home') setPage('home')
     else setPage('fail')
   }
@@ -145,12 +149,12 @@ function FirefoxApp({ sessionId, onStatus }) {
     <div className="fx">
       <div className="fx-chrome">
         <div className="fx-tabs">
-          <span className="fx-tab on">{page === 'inbox' ? 'Nirs Staff Console' : 'Nirs Central Bank'}</span>
+          <span className="fx-tab on">{page === 'home' ? 'New Tab' : page === 'inbox' ? 'Nirs Staff Console' : 'Nirs Central Bank'}</span>
           <span className="fx-tab">+</span>
         </div>
         <form className="fx-bar" onSubmit={go}>
-          <button type="button" onClick={() => { setUrl(TARGET.url); setPage(flag ? 'inbox' : 'login') }}>Home</button>
-          <input value={url} onChange={(e) => setUrl(e.target.value)} />
+          <button type="button" onClick={() => { setUrl(''); setPage('home') }}>Home</button>
+          <input aria-label="Browser address" placeholder="Enter a lab address" value={url} onChange={(e) => setUrl(e.target.value)} />
           <button type="submit">Go</button>
         </form>
       </div>
@@ -158,7 +162,8 @@ function FirefoxApp({ sessionId, onStatus }) {
         {page === 'home' && (
           <div className="fx-home">
             <h2>Firefox ESR</h2>
-            <button type="button" className="linkish" onClick={() => { setUrl(TARGET.url); setPage('login'); api.openPortal?.(sessionId); onStatus() }}>{TARGET.url}</button>
+            <p>Enter the training address above or open your lab bookmark.</p>
+            <button type="button" className="linkish" onClick={openBank}>{TARGET.url}</button>
           </div>
         )}
         {page === 'fail' && <div className="fx-home"><h2>Hmm. We cannot find that site.</h2></div>}
@@ -224,54 +229,94 @@ function FilesApp() {
   )
 }
 
+const DESKTOP_APPS = {
+  terminal: { label: 'Terminal', x: 108, y: 300, w: 720, h: 320 },
+  browser: { label: 'Firefox ESR', x: 220, y: 46, w: 820, h: 430 },
+  net: { label: 'Lab Net', x: 108, y: 46, w: 520, h: 220 },
+  files: { label: 'Home', x: 280, y: 130, w: 560, h: 360 },
+  notes: { label: 'Lab Notes', x: 420, y: 170, w: 380, h: 280 },
+}
+
+function windowRect(win, bounds) {
+  const maxWidth = Math.max(1, bounds.width - 16)
+  const maxHeight = Math.max(1, bounds.height - 84)
+  const w = win.maximized ? maxWidth : Math.min(win.w, maxWidth)
+  const h = win.maximized ? maxHeight : Math.min(win.h, maxHeight)
+  return {
+    w, h,
+    x: win.maximized ? 8 : Math.max(8, Math.min(win.x, bounds.width - w - 8)),
+    y: win.maximized ? 38 : Math.max(38, Math.min(win.y, bounds.height - h - 46)),
+  }
+}
+
 function KaliDesktop({ session, lines, onCommand, onFlag, onLock, flagMsg, receivedAt, onRefresh, onLifecycle, busy }) {
   const [menu, setMenu] = useState(false)
   const [now, setNow] = useState(() => new Date())
   const [flag, setFlag] = useState('')
-  const [wins, setWins] = useState({
-    terminal: { open: true, z: 5, x: 108, y: 300, w: 720, h: 320 },
-    browser: { open: true, z: 4, x: 220, y: 46, w: 820, h: 430 },
-    net: { open: true, z: 3, x: 108, y: 46, w: 520, h: 180 },
-    files: { open: false, z: 2, x: 280, y: 130, w: 560, h: 360 },
-    notes: { open: false, z: 2, x: 420, y: 170, w: 380, h: 280 },
-  })
+  const [wins, setWins] = useState(() => Object.fromEntries(Object.entries(DESKTOP_APPS)
+    .map(([key, win]) => [key, { ...win, open: false, minimized: false, maximized: false, z: 1 }])))
+  const [bounds, setBounds] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }))
+  const desktop = useRef(null)
   const drag = useRef(null)
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(id)
   }, [])
   useEffect(() => {
-    function move(e) {
-      if (!drag.current) return
-      const { key, ox, oy, sx, sy } = drag.current
-      setWins((prev) => ({ ...prev, [key]: { ...prev[key], x: Math.max(0, sx + e.clientX - ox), y: Math.max(28, sy + e.clientY - oy) } }))
-    }
-    function up() { drag.current = null }
-    window.addEventListener('mousemove', move)
-    window.addEventListener('mouseup', up)
-    return () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up) }
+    const observer = new ResizeObserver(([entry]) => {
+      setBounds({ width: entry.contentRect.width, height: entry.contentRect.height })
+    })
+    observer.observe(desktop.current)
+    return () => observer.disconnect()
   }, [])
   function focus(key) {
-    if (key === 'browser') {
-      try { api.openPortal?.(session.session_id); onRefresh() } catch { onRefresh() }
-    }
     setWins((prev) => {
       const max = Math.max(...Object.values(prev).map((w) => w.z))
-      return { ...prev, [key]: { ...prev[key], open: true, z: max + 1 } }
+      return { ...prev, [key]: { ...prev[key], open: true, minimized: false, z: max + 1 } }
     })
     setMenu(false)
   }
-  function close(key) { setWins((prev) => ({ ...prev, [key]: { ...prev[key], open: false } })) }
-  function startDrag(key, e) {
-    if (e.button !== 0) return
-    drag.current = { key, ox: e.clientX, oy: e.clientY, sx: wins[key].x, sy: wins[key].y }
+  function close(key) {
+    drag.current = null
+    setWins((prev) => ({ ...prev, [key]: { ...prev[key], open: false, minimized: false } }))
+  }
+  function minimize(key) {
+    drag.current = null
+    setWins((prev) => ({ ...prev, [key]: { ...prev[key], minimized: true } }))
+  }
+  function maximize(key) {
+    drag.current = null
     focus(key)
+    setWins((prev) => ({ ...prev, [key]: { ...prev[key], maximized: !prev[key].maximized } }))
+  }
+  function startDrag(key, e) {
+    if (e.button !== 0 || wins[key].maximized) return
+    e.preventDefault()
+    e.stopPropagation()
+    const rect = windowRect(wins[key], bounds)
+    e.currentTarget.setPointerCapture(e.pointerId)
+    drag.current = { key, pointerId: e.pointerId, ox: e.clientX, oy: e.clientY, sx: rect.x, sy: rect.y }
+    focus(key)
+  }
+  function moveDrag(e) {
+    if (!drag.current || drag.current.pointerId !== e.pointerId) return
+    const { key, ox, oy, sx, sy } = drag.current
+    setWins((prev) => {
+      const { x, y } = windowRect({ ...prev[key], x: sx + e.clientX - ox, y: sy + e.clientY - oy }, bounds)
+      return { ...prev, [key]: { ...prev[key], x, y } }
+    })
+  }
+  function endDrag() { drag.current = null }
+  function windowProps(key) {
+    return { ...wins[key], ...windowRect(wins[key], bounds), id: key,
+      onFocus: () => focus(key), onClose: () => close(key), onMinimize: () => minimize(key), onMaximize: () => maximize(key),
+      onDragStart: (event) => startDrag(key, event), onDragMove: moveDrag, onDragEnd: endDrag }
   }
   const remain = remainingSeconds(session, receivedAt)
   const mm = String(Math.floor(remain / 60)).padStart(2, '0')
   const ss = String(remain % 60).padStart(2, '0')
   return (
-    <div className="kali" dir="ltr" onClick={() => setMenu(false)}>
+    <div className="kali" ref={desktop} dir="ltr" onClick={() => setMenu(false)}>
       <header className="panel">
         <button type="button" className="panel-apps" onClick={(e) => { e.stopPropagation(); setMenu((v) => !v) }}>
           <DragonMark size={16} /> Applications
@@ -300,28 +345,29 @@ function KaliDesktop({ session, lines, onCommand, onFlag, onLock, flagMsg, recei
         <button type="button" onClick={() => focus('files')}><IconFolder />Home</button>
         <button type="button" onClick={() => focus('notes')}><IconNotes />Lab Notes</button>
       </div>
+      <div className="window-layer">
       {wins.net.open && (
-        <WindowFrame title="lab-net 10.8.0.0/24" z={wins.net.z} x={wins.net.x} y={wins.net.y} w={wins.net.w} h={wins.net.h} onFocus={() => focus('net')} onClose={() => close('net')} onDragStart={(e) => startDrag('net', e)}>
+        <WindowFrame title="lab-net 10.8.0.0/24" {...windowProps('net')}>
           <NetworkApp />
         </WindowFrame>
       )}
       {wins.terminal.open && (
-        <WindowFrame title="bisha@kali: ~" z={wins.terminal.z} x={wins.terminal.x} y={wins.terminal.y} w={wins.terminal.w} h={wins.terminal.h} onFocus={() => focus('terminal')} onClose={() => close('terminal')} onDragStart={(e) => startDrag('terminal', e)}>
+        <WindowFrame title="bisha@kali: ~" {...windowProps('terminal')}>
           <TerminalApp lines={lines} onCommand={onCommand} />
         </WindowFrame>
       )}
       {wins.browser.open && (
-        <WindowFrame title="Mozilla Firefox ESR" z={wins.browser.z} x={wins.browser.x} y={wins.browser.y} w={wins.browser.w} h={wins.browser.h} onFocus={() => focus('browser')} onClose={() => close('browser')} onDragStart={(e) => startDrag('browser', e)}>
+        <WindowFrame title="Mozilla Firefox ESR" {...windowProps('browser')}>
           <FirefoxApp sessionId={session.session_id} onStatus={onRefresh} />
         </WindowFrame>
       )}
       {wins.files.open && (
-        <WindowFrame title="Home" z={wins.files.z} x={wins.files.x} y={wins.files.y} w={wins.files.w} h={wins.files.h} onFocus={() => focus('files')} onClose={() => close('files')} onDragStart={(e) => startDrag('files', e)}>
+        <WindowFrame title="Home" {...windowProps('files')}>
           <FilesApp />
         </WindowFrame>
       )}
       {wins.notes.open && (
-        <WindowFrame title="lab-notes.txt" z={wins.notes.z} x={wins.notes.x} y={wins.notes.y} w={wins.notes.w} h={wins.notes.h} onFocus={() => focus('notes')} onClose={() => close('notes')} onDragStart={(e) => startDrag('notes', e)}>
+        <WindowFrame title="lab-notes.txt" {...windowProps('notes')}>
           <div className="notes">
             <p>tun0 {TARGET.client}/24</p>
             <p>{TARGET.url}</p>
@@ -329,6 +375,7 @@ function KaliDesktop({ session, lines, onCommand, onFlag, onLock, flagMsg, recei
           </div>
         </WindowFrame>
       )}
+      </div>
       <aside className="lab-tray">
         <b>{session.status} · Score {session.score?.earned || 0}/{session.score?.max || 100}</b>
         {(session.tasks || []).map((task, idx) => (
@@ -346,6 +393,12 @@ function KaliDesktop({ session, lines, onCommand, onFlag, onLock, flagMsg, recei
           <button disabled={busy} onClick={() => onLifecycle('cleanup')}>End lab</button>
         </div>
       </aside>
+      <footer className="desktop-taskbar" aria-label="Open applications">
+        {!Object.values(wins).some((win) => win.open) && <span>Open an app from the desktop or Applications menu.</span>}
+        {Object.entries(wins).filter(([, win]) => win.open).map(([key, win]) => (
+          <button key={key} type="button" aria-label={`Show ${win.label}`} aria-pressed={!win.minimized} onClick={() => focus(key)}>{win.label}</button>
+        ))}
+      </footer>
     </div>
   )
 }

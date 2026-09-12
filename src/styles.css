@@ -59,7 +59,9 @@ button { cursor: pointer; }
 
 .kali {
   position: relative;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 320px;
   overflow: hidden;
   background: url('/wallpaper.svg') center/cover no-repeat;
 }
@@ -107,21 +109,29 @@ button { cursor: pointer; }
 }
 .desk-icons button:hover { background: rgba(255,255,255,.08); }
 
+.window-layer { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
 .xfwm {
   position: absolute; background: #1d1d1d; border: 1px solid #111;
   box-shadow: 0 18px 50px rgba(0,0,0,.45);
-  display: flex; flex-direction: column; min-width: 280px;
+  display: flex; flex-direction: column; min-width: 0; pointer-events: auto;
 }
+.xfwm[hidden] { display: none; }
 .xfwm-bar {
-  height: 28px; background: linear-gradient(#3a3a3a, #2a2a2a);
+  height: 28px; flex-shrink: 0; background: linear-gradient(#3a3a3a, #2a2a2a);
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 8px; cursor: move; user-select: none;
+  padding: 0 6px 0 8px; cursor: move; user-select: none; touch-action: none;
 }
-.xfwm-title { font-size: 12px; color: #ddd; }
-.xfwm-btns { display: flex; gap: 6px; align-items: center; }
-.xfwm-btns i { width: 12px; height: 12px; border-radius: 50%; background: #555; display: inline-block; }
-.xfwm-btns button { width: 18px; height: 18px; border: 0; background: #a33; color: #fff; font-size: 10px; }
-.xfwm-body { flex: 1; min-height: 0; background: #111; }
+.xfwm-title { font-size: 12px; color: #ddd; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xfwm-btns { display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
+.xfwm-btns button { width: 24px; height: 22px; padding: 0; border: 0; border-radius: 2px; background: #484848; color: #fff; font-size: 16px; line-height: 1; }
+.xfwm-btns button:hover { background: #656565; }
+.xfwm-btns .xfwm-close { background: #a33; }
+.xfwm-btns .xfwm-close:hover { background: #cf4545; }
+.xfwm-body { flex: 1; min-height: 0; overflow: auto; background: #111; }
+.desktop-taskbar { position: absolute; bottom: 0; left: 0; right: 0; height: 38px; z-index: 50; display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: #161c24f2; border-top: 1px solid #37414f; overflow-x: auto; }
+.desktop-taskbar > span { color: var(--muted); font-size: 12px; }
+.desktop-taskbar button { flex-shrink: 0; border: 1px solid #485362; border-radius: 3px; padding: 5px 12px; background: #242c38; color: var(--text); }
+.desktop-taskbar button[aria-pressed="true"] { border-bottom: 2px solid var(--teal); }
 
 .qterm {
   height: 100%; background: var(--term); color: #d7ffd0;
@@ -140,7 +150,7 @@ button { cursor: pointer; }
 .fx-tab { background: #3a3944; color: #ddd; padding: 6px 12px; border-radius: 8px 8px 0 0; font-size: 12px; }
 .fx-tab.on { background: #42414d; }
 .fx-bar { display: flex; gap: 6px; padding: 8px; }
-.fx-bar input { flex: 1; background: #42414d; border: 0; color: #fff; padding: 7px 10px; border-radius: 16px; }
+.fx-bar input { flex: 1; min-width: 0; background: #42414d; border: 0; color: #fff; padding: 7px 10px; border-radius: 16px; }
 .fx-bar button { background: #42414d; color: #fff; border: 0; padding: 6px 10px; border-radius: 8px; }
 .fx-page { flex: 1; overflow: auto; background: linear-gradient(#1a2744, #0e1628); color: #222; }
 .fx-home { padding: 40px; color: #eee; }
@@ -187,21 +197,15 @@ button { cursor: pointer; }
 .netmap p { color: #8aa0b3; font-size: 12px; }
 
 .lab-tray {
-  position: absolute; right: 12px; bottom: 12px; width: 240px;
+  position: absolute; right: 12px; bottom: 50px; width: 240px;
   background: rgba(12,16,22,.92); border: 1px solid #2a3344;
-  padding: 10px; z-index: 40; font-size: 12px;
+  padding: 10px; z-index: 3; font-size: 12px; max-height: calc(100% - 96px); overflow: auto;
 }
 .lab-tray div { margin-bottom: 4px; color: #9bb; }
 .lab-tray .done { color: #2ee6c7; }
 .lab-tray form { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .lab-tray input { background: #0d1118; border: 1px solid #2a3344; color: #fff; padding: 6px; }
 .lab-tray button { background: var(--teal); border: 0; padding: 6px; font-weight: 700; }
-
-@media (max-width: 980px) {
-  .lock-time { font-size: 56px; }
-  .xfwm { left: 8px !important; width: calc(100% - 16px) !important; }
-  .lab-tray { width: calc(100% - 24px); }
-}
 
 button:disabled { cursor: default; opacity: .55; }
 .session-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
@@ -214,18 +218,14 @@ button:disabled { cursor: default; opacity: .55; }
 .lab-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
 .lab-cards article { border: 1px solid #2a3344; padding: 20px; background: #18232f; }
 .qterm-out p, .portal-app code { overflow-wrap: anywhere; }
-@media (min-width: 981px) {
-  .xfwm { max-width: calc(100vw - 320px); left: min(12vw, 150px) !important; }
-}
 @media (max-width: 980px) {
-  .kali { overflow: auto; padding-bottom: 12px; }
-  .panel { position: sticky; top: 0; }
   .panel-places, .wifi { display: none; }
-  .desk-icons { position: relative; top: auto; left: auto; flex-direction: row; flex-wrap: wrap; padding: 16px 8px; gap: 6px; }
+}
+@media (max-width: 600px) {
+  .lock-time { font-size: 56px; }
+  .desk-icons { left: 8px; gap: 16px; }
   .desk-icons button { width: 70px; }
-  .xfwm { position: relative; top: auto !important; left: auto !important; margin: 10px 8px; height: min(480px, 65vh) !important; }
-  .xfwm-bar { cursor: default; }
-  .lab-tray { position: relative; right: auto; bottom: auto; margin: 12px; }
+  .lab-tray { width: calc(100% - 24px); }
   .portal { margin: 16px auto; padding: 18px; }
   .portal-app { grid-template-columns: 1fr; }
   .portal-app aside { display: none; }

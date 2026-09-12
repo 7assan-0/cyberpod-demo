@@ -13,8 +13,10 @@ npm run dev
 
 Open http://127.0.0.1:3000 and unlock with **bisha / bisha**.
 
-1. In Terminal, run `nmap 10.8.0.22`.
-2. Open Firefox ESR and inspect the bank login.
+The password field starts empty; type the password yourself. The desktop starts with all apps closed. Open apps using their desktop icons or the Applications menu. Drag a window by its title bar to move it horizontally or vertically. Use its minimize, maximize/restore and close buttons; minimized apps remain available in the bottom taskbar. Firefox opens a new tab: type the training address or click the lab bookmark to visit the bank.
+
+1. Open Terminal and run `nmap 10.8.0.22`.
+2. Open Firefox ESR, navigate to `http://10.8.0.22/login`, and inspect the bank login.
 3. Run the Hydra command shown by `help` or Lab Notes.
 4. Sign in to the bank using the recovered training credentials.
 5. Copy the treasury token and submit it in the task panel. Completing all tasks earns 100 points.
