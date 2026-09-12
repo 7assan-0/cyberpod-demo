@@ -1,6 +1,6 @@
 id: hydra-ssh-101
 name: Hydra Lab
-description: Simulated Kali desktop. Brute-force the Nexora web portal with Hydra.
+description: Simulated Kali desktop. Brute-force the Nirs Central Bank staff portal with Hydra.
 difficulty: beginner
 category: Brute Force
 status: AVAILABLE

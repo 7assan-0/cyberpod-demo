@@ -202,3 +202,33 @@ button { cursor: pointer; }
   .xfwm { left: 8px !important; width: calc(100% - 16px) !important; }
   .lab-tray { width: calc(100% - 24px); }
 }
+
+button:disabled { cursor: default; opacity: .55; }
+.session-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.lab-tray b { display: block; margin-bottom: 10px; }
+.live-workspace { min-height: 100vh; padding: 24px; background: #10161df5; }
+.live-workspace header { display: flex; align-items: center; justify-content: space-between; }
+.live-workspace button { padding: 10px 14px; border: 0; border-radius: 4px; }
+.live-workspace input { padding: 10px; margin-right: 8px; width: min(420px, 100%); }
+.live-workspace iframe { width: 100%; height: 65vh; margin-top: 20px; border: 1px solid #2a3344; }
+.lab-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+.lab-cards article { border: 1px solid #2a3344; padding: 20px; background: #18232f; }
+.qterm-out p, .portal-app code { overflow-wrap: anywhere; }
+@media (min-width: 981px) {
+  .xfwm { max-width: calc(100vw - 320px); left: min(12vw, 150px) !important; }
+}
+@media (max-width: 980px) {
+  .kali { overflow: auto; padding-bottom: 12px; }
+  .panel { position: sticky; top: 0; }
+  .panel-places, .wifi { display: none; }
+  .desk-icons { position: relative; top: auto; left: auto; flex-direction: row; flex-wrap: wrap; padding: 16px 8px; gap: 6px; }
+  .desk-icons button { width: 70px; }
+  .xfwm { position: relative; top: auto !important; left: auto !important; margin: 10px 8px; height: min(480px, 65vh) !important; }
+  .xfwm-bar { cursor: default; }
+  .lab-tray { position: relative; right: auto; bottom: auto; margin: 12px; }
+  .portal { margin: 16px auto; padding: 18px; }
+  .portal-app { grid-template-columns: 1fr; }
+  .portal-app aside { display: none; }
+  .fx-bar input, .prompt-row input { min-width: 0; }
+  .thunar { grid-template-columns: 100px 1fr; }
+}

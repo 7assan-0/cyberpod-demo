@@ -1,4 +1,4 @@
-const BASE = import.meta.env.VITE_API_BASE || ''
+const BASE = (import.meta.env?.VITE_API_BASE || '').replace(/\/+$/, '')
 
 function newKey() {
   const bytes = new Uint8Array(16)
@@ -17,11 +17,12 @@ async function request(path, options = {}) {
   const method = options.method || 'GET'
   if (csrf && method !== 'GET' && method !== 'HEAD') headers['X-CSRF-Token'] = csrf
   if (options.idempotent) headers['Idempotency-Key'] = options.idempotent
-  const response = await fetch(BASE + path, { ...options, method, headers, credentials: 'include', cache: 'no-store' })
-  const body = await response.json().catch(() => ({}))
+  const response = await fetch(BASE + path, { ...options, method, headers, credentials: 'include', cache: 'no-store', signal: options.signal || AbortSignal.timeout(20000) })
+  const body = await response.json().catch(() => { throw new Error('INVALID_API_RESPONSE') })
   if (!response.ok) {
     const err = new Error(body?.error?.code || 'HTTP_ERROR')
     err.payload = body
+    err.status = response.status
     throw err
   }
   if (JSON.stringify(body).includes('CYBERPOD{')) throw new Error('SECRET_LEAK')
@@ -33,7 +34,9 @@ export const liveApi = {
     return { auth: null, lab: null, session: null, view: 'login', lines: [] }
   },
   async me() {
-    return request('/api/v1/auth/me')
+    const body = await request('/api/v1/auth/me')
+    sessionStorage.setItem('cyberpod-csrf', body.csrf_token)
+    return body
   },
   async login({ email, password }) {
     const body = await request('/api/v1/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) })
@@ -91,11 +94,17 @@ export const liveApi = {
   async getSessionStatus(sessionId) {
     return request(`/api/v1/sessions/${encodeURIComponent(sessionId)}/status`)
   },
+  async getSessionAccess(sessionId) {
+    return request(`/api/v1/sessions/${encodeURIComponent(sessionId)}/access`)
+  },
+  async cleanupSession(sessionId) {
+    return request(`/api/v1/sessions/${encodeURIComponent(sessionId)}/cleanup`, { method: 'POST', body: '{}' })
+  },
   async submitFlag(sessionId, { flag, expected_revision }) {
     return request(`/api/v1/sessions/${encodeURIComponent(sessionId)}/flags`, {
       method: 'POST',
       body: JSON.stringify({ flag, expected_revision }),
-      idempotent: `flag:${sessionId}:${expected_revision}`,
+      idempotent: `flag:${sessionId}:${newKey()}`,
     })
   },
   setView() {},

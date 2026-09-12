@@ -6,14 +6,23 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview --host --port 3000"
+    "preview": "vite preview --host --port 3000",
+    "test": "node --test tests/unit/*.test.js",
+    "test:e2e": "playwright test",
+    "dev:live": "vite --host --mode live",
+    "build:live": "vite build --mode live"
   },
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@vitejs/plugin-react": "^5.0.2",
     "vite": "^7.1.5"
+  },
+  "engines": {
+    "node": ">=20.19.0"
   }
 }
