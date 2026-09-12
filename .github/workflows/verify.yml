@@ -32,7 +32,7 @@ jobs:
         with:
           repository: 7assan-0/cyberpod-integration
           # Pin the companion contract verified by this repair.
-          ref: 777238b8f43ce0ac8ffe3bf06a9614565de26fa9
+          ref: 392e9ad00fd368946c686d1d5212c022962b4637
           path: .integration
       - uses: actions/setup-node@v4
         with:

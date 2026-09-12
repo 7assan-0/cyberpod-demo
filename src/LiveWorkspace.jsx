@@ -8,6 +8,7 @@ export function LiveWorkspace({ session, busy, message, onLogout, onStart, onLif
   const [flag, setFlag] = useState('')
   const [desktop, setDesktop] = useState(null)
   const [accessError, setAccessError] = useState('')
+  const [accessAttempt, setAccessAttempt] = useState(0)
   useEffect(() => {
     let active = true
     api.listLabs().then((data) => { if (active) setLabs(data.labs || []) })
@@ -17,21 +18,29 @@ export function LiveWorkspace({ session, busy, message, onLogout, onStart, onLif
   }, [])
   useEffect(() => {
     setFlag(''); setDesktop(null); setAccessError('')
-    if (!session || !['RUNNING', 'COMPLETED'].includes(session.status)) return
+    if (!session || session.expired || !['RUNNING', 'COMPLETED'].includes(session.status)) return
     let active = true
-    const existing = session.desktop?.url
-    if (existing) { setDesktop(existing); return }
-    api.getSessionAccess(session.session_id).then((grant) => {
-      if (!active) return
-      const candidate = grant.browser_url
-      if (candidate) {
-        const url = new URL(candidate, window.location.origin)
+    let timer
+    async function renew() {
+      try {
+        const grant = await api.getSessionAccess(session.session_id)
+        if (!active) return
+        if (!grant.browser_url) throw new Error('Desktop access is unavailable.')
+        const url = new URL(grant.browser_url, window.location.origin)
         if (url.origin !== window.location.origin) throw new Error('Desktop must use the configured same-origin gateway.')
+        const lifetime = Date.parse(grant.expires_at) - Date.now()
+        if (!Number.isFinite(lifetime) || lifetime <= 0) throw new Error('Desktop access expired. Retry the connection.')
         setDesktop(url.href)
+        setAccessError('')
+        // Reconnect with a fresh grant before the gateway closes the old socket.
+        timer = setTimeout(renew, Math.max(1000, lifetime - Math.min(10000, lifetime / 3)))
+      } catch (err) {
+        if (active) { setDesktop(null); setAccessError(err.payload?.error?.message || err.message) }
       }
-    }).catch((err) => { if (active) setAccessError(err.payload?.error?.message || err.message) })
-    return () => { active = false }
-  }, [session?.session_id, session?.generation, session?.status])
+    }
+    renew()
+    return () => { active = false; clearTimeout(timer) }
+  }, [session?.session_id, session?.generation, session?.status, session?.expired, accessAttempt])
   return <main className="live-workspace">
     <header><h1>CyberPod</h1><button onClick={onLogout} disabled={busy}>Sign out</button></header>
     {message && <p role="status">{message}</p>}
@@ -59,6 +68,7 @@ export function LiveWorkspace({ session, busy, message, onLogout, onStart, onLif
       </div>
       {desktop ? <iframe title="Kali desktop" src={desktop} allow="clipboard-read; clipboard-write" />
         : <p>{accessError || 'Waiting for the configured desktop gateway.'}</p>}
+      {accessError && !session.expired && <button disabled={busy} onClick={() => setAccessAttempt((value) => value + 1)}>Retry desktop</button>}
       <ol>{(session.tasks || []).map((task) => <li key={task.id}>{task.title} — {task.status}<p>{task.description}</p></li>)}</ol>
       <form onSubmit={(event) => { event.preventDefault(); onFlag(flag) }}>
         <input aria-label="Flag" value={flag} onChange={(event) => setFlag(event.target.value)} placeholder="CYBERPOD{…}" maxLength={4096} />

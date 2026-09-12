@@ -1,5 +1,24 @@
 import { test, expect } from '@playwright/test'
 
+test('desktop renews its short-lived grant and releases it when paused', async ({ page }) => {
+  let grants = 0
+  await page.route('**/api/v1/sessions/*/access', (route) => route.fulfill({
+    json: { browser_url: `/desktop/probe/?grant=${++grants}`, expires_at: new Date(Date.now() + 1500).toISOString() },
+  }))
+  await page.route('**/desktop/probe/**', (route) => route.fulfill({ contentType: 'text/html', body: '<p>Desktop connection probe</p>' }))
+  await page.goto('/')
+  await page.getByLabel('Username', { exact: true }).fill('demo@cyberpod.local')
+  await page.getByLabel('Password', { exact: true }).fill('CyberPodDemo123!')
+  await page.getByRole('button', { name: 'Unlock' }).click()
+  await page.getByRole('button', { name: 'Start Hydra Lab', exact: true }).click()
+  await expect(page.frameLocator('iframe').getByText('Desktop connection probe')).toBeVisible()
+  await expect.poll(() => grants).toBeGreaterThan(1)
+  await page.getByRole('button', { name: 'Pause', exact: true }).click()
+  await expect(page.locator('iframe')).toHaveCount(0)
+  await page.getByRole('button', { name: 'End lab', exact: true }).click()
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+})
+
 test('browser uses the real student API across refresh and lifecycle changes', async ({ page }) => {
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))

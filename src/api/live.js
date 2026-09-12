@@ -47,11 +47,8 @@ export const liveApi = {
     }
   },
   async logout() {
-    try {
-      await request('/api/v1/auth/logout', { method: 'POST', body: '{}' })
-    } finally {
-      sessionStorage.removeItem('cyberpod-csrf')
-    }
+    await request('/api/v1/auth/logout', { method: 'POST', body: '{}' })
+    sessionStorage.removeItem('cyberpod-csrf')
     return { ok: true }
   },
   async listLabs() {
